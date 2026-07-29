@@ -12,15 +12,15 @@ typedef enum
     TURN_CALIBRATION_FAULT
 } TurnCalibrationState_t;
 
-#define TURN_CALIBRATION_FAULT_NONE       (0U)
-#define TURN_CALIBRATION_FAULT_IMU        (1U)
-#define TURN_CALIBRATION_FAULT_TIMEOUT    (2U)
+#define TURN_CALIBRATION_FAULT_NONE (0U)
+#define TURN_CALIBRATION_FAULT_IMU (1U)
+#define TURN_CALIBRATION_FAULT_TIMEOUT (2U)
 
 /*
  * Change this default after the on-track 180-degree arc test is satisfactory.
  * The OLED tuning value is kept while powered, but is not written to flash.
  */
-#define TURN_CALIBRATION_RADIUS_DEFAULT_M (0.48f)
+#define TURN_CALIBRATION_RADIUS_DEFAULT_M (0.465f)
 
 extern volatile TurnCalibrationState_t TurnCalibrationState;
 extern volatile uint8_t TurnCalibrationFault;
