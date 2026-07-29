@@ -5,11 +5,11 @@
 
 #include "ti_msp_dl_config.h"
 #include "board.h"
-#define OLED_CMD  0	//Command //Ğ´ÃüÁî
-#define OLED_DATA 1	//Data //Ğ´Êı¾İ
+#define OLED_CMD  0	//Command //å†™å‘½ä»¤
+#define OLED_DATA 1	//Data //å†™æ•°æ®
 extern uint8_t OLED_GRAM[128][8];
 //Oled control function
-//OLED¿ØÖÆÓÃº¯Êı
+//OLEDæ§åˆ¶ç”¨å‡½æ•°
 void OLED_WR_Byte(uint8_t dat,uint8_t cmd);	    
 void OLED_Display_On(void);
 void OLED_Display_Off(void);

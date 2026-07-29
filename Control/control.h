@@ -1,11 +1,11 @@
 /***********************************************
-¹«Ë¾£ºÂÖÈ¤¿Æ¼¼£¨¶«İ¸£©ÓĞÏŞ¹«Ë¾
-Æ·ÅÆ£ºWHEELTEC
-¹ÙÍø£ºwheeltec.net
-ÌÔ±¦µêÆÌ£ºshop114407458.taobao.com 
-ËÙÂôÍ¨: https://minibalance.aliexpress.com/store/4455017
-°æ±¾£º5.7
-ĞŞ¸ÄÊ±¼ä£º2021-04-29
+å…¬å¸ï¼šè½®è¶£ç§‘æŠ€ï¼ˆä¸œèï¼‰æœ‰é™å…¬å¸
+å“ç‰Œï¼šWHEELTEC
+å®˜ç½‘ï¼šwheeltec.net
+æ·˜å®åº—é“ºï¼šshop114407458.taobao.com 
+é€Ÿå–é€š: https://minibalance.aliexpress.com/store/4455017
+ç‰ˆæœ¬ï¼š5.7
+ä¿®æ”¹æ—¶é—´ï¼š2021-04-29
 
  
 Brand: WHEELTEC
@@ -13,7 +13,7 @@ Website: wheeltec.net
 Taobao shop: shop114407458.taobao.com 
 Aliexpress: https://minibalance.aliexpress.com/store/4455017
 Version:5.7
-Update£º2021-04-29
+Updateï¼š2021-04-29
 
 All rights reserved
 ***********************************************/
@@ -22,37 +22,37 @@ All rights reserved
 #include "board.h"
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
-#define Frequency	200.0f			//Ã¿5ms¶ÁÈ¡Ò»´Î±àÂëÆ÷µÄÖµ
-#define Perimeter	0.2104867	    //ÂÖ×ÓÖÜ³¤(µ¥Î»:m)=0.67*3.1415926
+#define Frequency	200.0f			//æ¯5msè¯»å–ä¸€æ¬¡ç¼–ç å™¨çš„å€¼
+#define Perimeter	0.2104867	    //è½®å­å‘¨é•¿(å•ä½:m)=0.67*3.1415926
 #define Wheel_spacing 0.119f		
 #define Axle_spacing  0.143f
 #define PI 3.1415926
 
-#define R3X_MOTOR_RATIO 28 //R3XĞ¡³µµç»ú¼õËÙ±È
-#define Hall_13  13 //±àÂëÆ÷¾«¶È.»ô¶û±àÂëÆ÷Îª13
+#define R3X_MOTOR_RATIO 28 //R3Xå°è½¦ç”µæœºå‡é€Ÿæ¯”
+#define Hall_13  13 //ç¼–ç å™¨ç²¾åº¦.éœå°”ç¼–ç å™¨ä¸º13
 
 
-//µç»úËÙ¶È¿ØÖÆÏà¹Ø²ÎÊı½á¹¹Ìå
+//ç”µæœºé€Ÿåº¦æ§åˆ¶ç›¸å…³å‚æ•°ç»“æ„ä½“
 typedef struct  
 {
-	float Current_Encoder;     	//±àÂëÆ÷ÊıÖµ£¬¶ÁÈ¡µç»úÊµÊ±ËÙ¶È
-	float Motor_Pwm;     		//µç»úPWMÊıÖµ£¬¿ØÖÆµç»úÊµÊ±ËÙ¶È
-	float Target_Encoder;  		//µç»úÄ¿±ê±àÂëÆ÷ËÙ¶ÈÖµ£¬¿ØÖÆµç»úÄ¿±êËÙ¶È
-	float Velocity; 	 		//µç»úËÙ¶ÈÖµ
+	float Current_Encoder;     	//ç¼–ç å™¨æ•°å€¼ï¼Œè¯»å–ç”µæœºå®æ—¶é€Ÿåº¦
+	float Motor_Pwm;     		//ç”µæœºPWMæ•°å€¼ï¼Œæ§åˆ¶ç”µæœºå®æ—¶é€Ÿåº¦
+	float Target_Encoder;  		//ç”µæœºç›®æ ‡ç¼–ç å™¨é€Ÿåº¦å€¼ï¼Œæ§åˆ¶ç”µæœºç›®æ ‡é€Ÿåº¦
+	float Velocity; 	 		//ç”µæœºé€Ÿåº¦å€¼
 }Motor_parameter;
 
-//±àÂëÆ÷½á¹¹Ìå
+//ç¼–ç å™¨ç»“æ„ä½“
 typedef struct  
 {
   int A;      
   int B;  
 }Encoder;
-extern float Move_X,Move_Z;						//Ä¿±êËÙ¶ÈºÍÄ¿±ê×ªÏòËÙ¶È
-extern Encoder OriginalEncoder; 					//±àÂëÆ÷Ô­Ê¼Êı¾İ   
-extern Motor_parameter MotorA,MotorB;				//×óÓÒµç»úÏà¹Ø±äÁ¿
+extern float Move_X,Move_Z;						//ç›®æ ‡é€Ÿåº¦å’Œç›®æ ‡è½¬å‘é€Ÿåº¦
+extern Encoder OriginalEncoder; 					//ç¼–ç å™¨åŸå§‹æ•°æ®   
+extern Motor_parameter MotorA,MotorB;				//å·¦å³ç”µæœºç›¸å…³å˜é‡
 extern float Voltage_Count,Voltage_All,Voltage;
 extern float Velocity_KP,Velocity_KI;	
-extern int Run_Mode;//Ğ¡³µÔËĞĞÄ£Ê½
+extern int Run_Mode;//å°è½¦è¿è¡Œæ¨¡å¼
 void TIM6_Init(void); 
 void Get_Velocity_From_Encoder(int Encoder1,int Encoder2);
 float target_limit_float(float insert,float low,float high);
@@ -60,6 +60,7 @@ int target_limit_int(int insert,int low,int high);
 void Get_Target_Encoder(float Vx,float Vz);
 int Incremental_PI_Left (float Encoder,float Target);
 int Incremental_PI_Right (float Encoder,float Target);
+void Reset_Velocity_PI(void);
 void Get_Motor_PWM(void);
 void Set_Pwm(int motor_a,int motor_b);
 int Turn_Off(void);

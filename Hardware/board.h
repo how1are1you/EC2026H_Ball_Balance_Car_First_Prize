@@ -49,7 +49,7 @@ typedef __I uint16_t vuc16;  /*!< Read Only */
 typedef __I uint8_t vuc8;   /*!< Read Only */
 
 // Enumeration of car types
-//Ğ¡³µĞÍºÅµÄÃ¶¾Ù¶¨Òå
+//å°è½¦å‹å·çš„æšä¸¾å®šä¹‰
 typedef enum 
 {
 	Mec_Car = 0, 
@@ -60,35 +60,35 @@ typedef enum
 	Tank_Car
 } CarMode;
 
-extern u8 Way_Angle;                                                     //»ñÈ¡½Ç¶ÈµÄËã·¨£¬1£ºËÄÔªÊı  2£º¿¨¶ûÂü  3£º»¥²¹ÂË²¨
-extern u16 determine;                              //À×´ï¸úËæÄ£Ê½µÄÒ»¸ö±êÖ¾Î»
-extern int Motor_Left,Motor_Right;                                 //µç»úPWM±äÁ¿ Ó¦ÊÇmotorµÄ ÏòmotoÖÂ¾´
-extern u8 Flag_Stop,Flag_Show;                                           //Í£Ö¹±êÖ¾Î»ºÍ ÏÔÊ¾±êÖ¾Î» Ä¬ÈÏÍ£Ö¹ ÏÔÊ¾´ò¿ª
-extern int Middle_angle;                                                                             //µç³ØµçÑ¹²ÉÑùÏà¹ØµÄ±äÁ¿
-extern float Voltage,Angle_Balance,Gyro_Balance,Gyro_Turn;                           //Æ½ºâÇã½Ç Æ½ºâÍÓÂİÒÇ ×ªÏòÍÓÂİÒÇ
-extern u8 LD_Successful_Receive_flag;              //À×´ï³É¹¦½ÓÊÕÊı¾İ±êÖ¾Î»
+extern u8 Way_Angle;                                                     //è·å–è§’åº¦çš„ç®—æ³•ï¼Œ1ï¼šå››å…ƒæ•°  2ï¼šå¡å°”æ›¼  3ï¼šäº’è¡¥æ»¤æ³¢
+extern u16 determine;                              //é›·è¾¾è·Ÿéšæ¨¡å¼çš„ä¸€ä¸ªæ ‡å¿—ä½
+extern int Motor_Left,Motor_Right;                                 //ç”µæœºPWMå˜é‡ åº”æ˜¯motorçš„ å‘motoè‡´æ•¬
+extern u8 Flag_Stop,Flag_Show;                                           //åœæ­¢æ ‡å¿—ä½å’Œ æ˜¾ç¤ºæ ‡å¿—ä½ é»˜è®¤åœæ­¢ æ˜¾ç¤ºæ‰“å¼€
+extern int Middle_angle;                                                                             //ç”µæ± ç”µå‹é‡‡æ ·ç›¸å…³çš„å˜é‡
+extern float Voltage,Angle_Balance,Gyro_Balance,Gyro_Turn;                           //å¹³è¡¡å€¾è§’ å¹³è¡¡é™€èºä»ª è½¬å‘é™€èºä»ª
+extern u8 LD_Successful_Receive_flag;              //é›·è¾¾æˆåŠŸæ¥æ”¶æ•°æ®æ ‡å¿—ä½
 extern int Temperature;
-extern u32 Distance;                                                //³¬Éù²¨²â¾à
+extern u32 Distance;                                                //è¶…å£°æ³¢æµ‹è·
 extern u8 Flag_follow,Flag_avoid,delay_50,delay_flag,PID_Send;
-extern float Acceleration_Z;                       //ZÖá¼ÓËÙ¶È¼Æ
+extern float Acceleration_Z;                       //Zè½´åŠ é€Ÿåº¦è®¡
 extern float Balance_Kp,Balance_Kd,Velocity_Kp,Velocity_Ki,Turn_Kp,Turn_Kd;
-extern float RC_Velocity,RC_Turn_Velocity,Move_X,Move_Y,Move_Z,PS2_ON_Flag;                //Ò£¿Ø¿ØÖÆµÄËÙ¶È
+extern float RC_Velocity,RC_Turn_Velocity,Move_X,Move_Y,Move_Z,PS2_ON_Flag;                //é¥æ§æ§åˆ¶çš„é€Ÿåº¦
 extern u8 one_frame_data_success_flag,one_lap_data_success_flag;
 extern int lap_count,PointDataProcess_count,test_once_flag,Dividing_point;
-extern float Velocity_Left,Velocity_Right;  //³µÂÖËÙ¶È(mm/s)
+extern float Velocity_Left,Velocity_Right;  //è½¦è½®é€Ÿåº¦(mm/s)
 extern uint8_t  recv0_flag;
 extern u16 test_num,show_cnt;
 extern u8 Car_Mode;
 extern volatile unsigned long tick_ms;
 extern int Servo_Init;
 
-//Systick×î´ó¼ÆÊıÖµ,24Î»
+//Systickæœ€å¤§è®¡æ•°å€¼,24ä½
 #define SysTickMAX_COUNT 0xFFFFFF
 
-//Systick¼ÆÊıÆµÂÊ
+//Systickè®¡æ•°é¢‘ç‡
 #define SysTickFre 80000000
 
-//½«systickµÄ¼ÆÊıÖµ×ª»»Îª¾ßÌåµÄÊ±¼äµ¥Î»
+//å°†systickçš„è®¡æ•°å€¼è½¬æ¢ä¸ºå…·ä½“çš„æ—¶é—´å•ä½
 #define SysTick_MS(x)  ((SysTickFre/1000U)*(uint32_t)(x))
 #define SysTick_US(x)  ((SysTickFre/1000000U)*(uint32_t)(x))
 

@@ -1,11 +1,11 @@
 /***********************************************
-¹«Ë¾£ºÂÖÈ¤¿Æ¼¼£¨¶«İ¸£©ÓĞÏŞ¹«Ë¾
-Æ·ÅÆ£ºWHEELTEC
-¹ÙÍø£ºwheeltec.net
-ÌÔ±¦µêÆÌ£ºshop114407458.taobao.com
-ËÙÂôÍ¨: https://minibalance.aliexpress.com/store/4455017
-°æ±¾£º5.7
-ĞŞ¸ÄÊ±¼ä£º2021-04-29
+å…¬å¸ï¼šè½®è¶£ç§‘æŠ€ï¼ˆä¸œèï¼‰æœ‰é™å…¬å¸
+å“ç‰Œï¼šWHEELTEC
+å®˜ç½‘ï¼šwheeltec.net
+æ·˜å®åº—é“ºï¼šshop114407458.taobao.com
+é€Ÿå–é€š: https://minibalance.aliexpress.com/store/4455017
+ç‰ˆæœ¬ï¼š5.7
+ä¿®æ”¹æ—¶é—´ï¼š2021-04-29
 
 
 Brand: WHEELTEC
@@ -13,7 +13,7 @@ Website: wheeltec.net
 Taobao shop: shop114407458.taobao.com
 Aliexpress: https://minibalance.aliexpress.com/store/4455017
 Version:5.7
-Update£º2021-04-29
+Updateï¼š2021-04-29
 
 All rights reserved
 ***********************************************/
@@ -22,15 +22,15 @@ All rights reserved
 Function: OLED display
 Input   : none
 Output  : none
-º¯Êı¹¦ÄÜ£ºOLEDÏÔÊ¾
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šOLEDæ˜¾ç¤º
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 extern int Servo;
 void oled_show(void)
 {
-     memset(OLED_GRAM,0, 128*8*sizeof(u8)); //GRAMÇåÁãµ«²»Á¢¼´Ë¢ĞÂ£¬·ÀÖ¹»¨ÆÁ
-        //=============µÚÒ»ĞĞÏÔÊ¾Ğ¡³µÄ£Ê½=======================//
+     memset(OLED_GRAM,0, 128*8*sizeof(u8)); //GRAMæ¸…é›¶ä½†ä¸ç«‹å³åˆ·æ–°ï¼Œé˜²æ­¢èŠ±å±
+        //=============ç¬¬ä¸€è¡Œæ˜¾ç¤ºå°è½¦æ¨¡å¼=======================//
 	
              if(Car_Mode==0)   OLED_ShowString(0,0,"Mec ");
         else if(Car_Mode==1)   OLED_ShowString(0,0,"Omni");
@@ -42,11 +42,16 @@ void oled_show(void)
 		OLED_ShowNumber(60,10, myabs((int)(Servo)),4,12);
 	
 	    if(Run_Mode==0)   OLED_ShowString(90,0,"APP");
-		OLED_ShowString(00,20,"VZ");
-		if( Move_Z<0)    OLED_ShowString(48,20,"-");
-		if(Move_Z>=0)    OLED_ShowString(48,20,"+");
-		OLED_ShowNumber(56,20, myabs((int)(Move_Z*1000)),4,12);
-        //=============µÚËÄĞĞÏÔÊ¾×ó±àÂëÆ÷PWMÓë¶ÁÊı=======================//
+		OLED_ShowChar(0,20,'L',12,1);
+		OLED_ShowChar(6,20,(MotorA.Motor_Pwm < 0) ? '-' : '+',12,1);
+		OLED_ShowNumber(12,20,myabs((int)MotorA.Motor_Pwm),4,12);
+		OLED_ShowChar(48,20,'R',12,1);
+		OLED_ShowChar(54,20,(MotorB.Motor_Pwm < 0) ? '-' : '+',12,1);
+		OLED_ShowNumber(60,20,myabs((int)MotorB.Motor_Pwm),4,12);
+		OLED_ShowChar(96,20,'P',12,1);
+		OLED_ShowChar(102,20,'W',12,1);
+		OLED_ShowChar(108,20,'M',12,1);
+        //=============ç¬¬å››è¡Œæ˜¾ç¤ºå·¦ç¼–ç å™¨PWMä¸è¯»æ•°=======================//
                               OLED_ShowString(00,30,"L");
         if((MotorA.Target_Encoder*1000)<0)          OLED_ShowString(16,30,"-"),
                                                   OLED_ShowNumber(26,30,myabs((int)(MotorA.Target_Encoder*1000)),4,12);
@@ -58,7 +63,7 @@ void oled_show(void)
                               OLED_ShowNumber(68,30,myabs((int)(MotorA.Current_Encoder*1000)),4,12);
                                                     OLED_ShowString(96,30,"mm/s");
 
-        //=============µÚÎåĞĞÏÔÊ¾ÓÒ±àÂëÆ÷PWMÓë¶ÁÊı=======================//
+        //=============ç¬¬äº”è¡Œæ˜¾ç¤ºå³ç¼–ç å™¨PWMä¸è¯»æ•°=======================//
                               OLED_ShowString(00,40,"R");
         if((MotorB.Target_Encoder*1000)<0)         OLED_ShowString(16,40,"-"),
                                                     OLED_ShowNumber(26,40,myabs((int)(MotorB.Target_Encoder*1000)),4,12);
@@ -70,7 +75,7 @@ void oled_show(void)
                               OLED_ShowNumber(68,40,myabs((int)(MotorB.Current_Encoder*1000)),4,12);
                                                     OLED_ShowString(96,40,"mm/s");
 
-        //=============µÚÁùĞĞÏÔÊ¾µçÑ¹Óëµç»ú¿ª¹Ø=======================//
+        //=============ç¬¬å…­è¡Œæ˜¾ç¤ºç”µå‹ä¸ç”µæœºå¼€å…³=======================//
                               OLED_ShowString(0,50,"V");
                                                     OLED_ShowString(30,50,".");
                                                     OLED_ShowString(64,50,"V");
@@ -79,7 +84,7 @@ void oled_show(void)
         if(Flag_Stop)         OLED_ShowString(95,50,"OFF");
         if(!Flag_Stop)        OLED_ShowString(95,50,"ON ");
 
-        //=============Ë¢ĞÂ=======================//
+        //=============åˆ·æ–°=======================//
         OLED_Refresh_Gram();
 		
 }
@@ -87,49 +92,49 @@ void oled_show(void)
 Function: Send data to APP
 Input   : none
 Output  : none
-º¯Êı¹¦ÄÜ£ºÏòAPP·¢ËÍÊı¾İ
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šå‘APPå‘é€æ•°æ®
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void APP_Show(void)
 {
   static u8 flag;
     int Encoder_Left_Show,Encoder_Right_Show,Voltage_Show;
-    Voltage_Show=(Voltage-1000)*2/3;        if(Voltage_Show<0)Voltage_Show=0;if(Voltage_Show>100) Voltage_Show=100;   //¶ÔµçÑ¹Êı¾İ½øĞĞ´¦Àí
-    Encoder_Right_Show=Velocity_Right*1.1; if(Encoder_Right_Show<0) Encoder_Right_Show=-Encoder_Right_Show;           //¶Ô±àÂëÆ÷Êı¾İ¾ÍĞĞÊı¾İ´¦Àí±ãÓÚÍ¼ĞÎ»¯
+    Voltage_Show=(Voltage-1000)*2/3;        if(Voltage_Show<0)Voltage_Show=0;if(Voltage_Show>100) Voltage_Show=100;   //å¯¹ç”µå‹æ•°æ®è¿›è¡Œå¤„ç†
+    Encoder_Right_Show=Velocity_Right*1.1; if(Encoder_Right_Show<0) Encoder_Right_Show=-Encoder_Right_Show;           //å¯¹ç¼–ç å™¨æ•°æ®å°±è¡Œæ•°æ®å¤„ç†ä¾¿äºå›¾å½¢åŒ–
     Encoder_Left_Show=Velocity_Left*1.1;  if(Encoder_Left_Show<0) Encoder_Left_Show=-Encoder_Left_Show;
     flag=!flag;
-    if(PID_Send==1)         //·¢ËÍPID²ÎÊı,ÔÚAPPµ÷²Î½çÃæÏÔÊ¾
+    if(PID_Send==1)         //å‘é€PIDå‚æ•°,åœ¨APPè°ƒå‚ç•Œé¢æ˜¾ç¤º
     {
-        printf("{C%d:%d:%d:%d:%d:%d:%d:%d:%d}$",(int)RC_Velocity,(int)Velocity_KP,(int)Velocity_KI,(int)Servo_Init,(int)0,(int)0,0,0,0);//´òÓ¡µ½APPÉÏÃæ
+        printf("{C%d:%d:%d:%d:%d:%d:%d:%d:%d}$",(int)RC_Velocity,(int)Velocity_KP,(int)Velocity_KI,(int)Servo_Init,(int)0,(int)0,0,0,0);//æ‰“å°åˆ°APPä¸Šé¢
         PID_Send=0;
     }
-   else if(flag==0)     // ·¢ËÍµç³ØµçÑ¹£¬ËÙ¶È£¬½Ç¶ÈµÈ²ÎÊı£¬ÔÚAPPÊ×Ò³ÏÔÊ¾
-        printf("{A%d:%d:%d:%d}$",(int)Encoder_Left_Show,(int)Encoder_Right_Show,(int)Voltage_Show,(int)0); //´òÓ¡µ½APPÉÏÃæ
-     else                               //·¢ËÍĞ¡³µ×ËÌ¬½Ç£¬ÔÚ²¨ĞÎ½çÃæÏÔÊ¾
-      printf("{B%d:%d:%d}$",(int)0,(int)0,(int)0); //x£¬y£¬zÖá½Ç¶È ÔÚAPPÉÏÃæÏÔÊ¾²¨ĞÎ
-                                                                                                                    //¿É°´¸ñÊ½×ÔĞĞÔö¼ÓÏÔÊ¾²¨ĞÎ£¬×î¶à¿ÉÏÔÊ¾Îå¸ö
+   else if(flag==0)     // å‘é€ç”µæ± ç”µå‹ï¼Œé€Ÿåº¦ï¼Œè§’åº¦ç­‰å‚æ•°ï¼Œåœ¨APPé¦–é¡µæ˜¾ç¤º
+        printf("{A%d:%d:%d:%d}$",(int)Encoder_Left_Show,(int)Encoder_Right_Show,(int)Voltage_Show,(int)0); //æ‰“å°åˆ°APPä¸Šé¢
+     else                               //å‘é€å°è½¦å§¿æ€è§’ï¼Œåœ¨æ³¢å½¢ç•Œé¢æ˜¾ç¤º
+      printf("{B%d:%d:%d}$",(int)0,(int)0,(int)0); //xï¼Œyï¼Œzè½´è§’åº¦ åœ¨APPä¸Šé¢æ˜¾ç¤ºæ³¢å½¢
+                                                                                                                    //å¯æŒ‰æ ¼å¼è‡ªè¡Œå¢åŠ æ˜¾ç¤ºæ³¢å½¢ï¼Œæœ€å¤šå¯æ˜¾ç¤ºäº”ä¸ª
 }
 /**************************************************************************
 Function: Virtual oscilloscope sends data to upper computer
 Input   : none
 Output  : none
-º¯Êı¹¦ÄÜ£ºĞéÄâÊ¾²¨Æ÷ÍùÉÏÎ»»ú·¢ËÍÊı¾İ ¹Ø±ÕÏÔÊ¾ÆÁ
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šè™šæ‹Ÿç¤ºæ³¢å™¨å¾€ä¸Šä½æœºå‘é€æ•°æ® å…³é—­æ˜¾ç¤ºå±
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void DataScope(void)
 {
-    u8 i;//¼ÆÊı±äÁ¿
-    float Vol;                              //µçÑ¹±äÁ¿
-    unsigned char Send_Count; //´®¿ÚĞèÒª·¢ËÍµÄÊı¾İ¸öÊı
+    u8 i;//è®¡æ•°å˜é‡
+    float Vol;                              //ç”µå‹å˜é‡
+    unsigned char Send_Count; //ä¸²å£éœ€è¦å‘é€çš„æ•°æ®ä¸ªæ•°
  //   Vol=(float)Voltage/100;
-    DataScope_Get_Channel_Data( 0, 1 );       //ÏÔÊ¾½Ç¶È µ¥Î»£º¶È£¨¡ã£©
-    DataScope_Get_Channel_Data( 0, 2 );         //ÏÔÊ¾³¬Éù²¨²âÁ¿µÄ¾àÀë µ¥Î»£ºCM
-    DataScope_Get_Channel_Data( 0, 3 );                 //ÏÔÊ¾µç³ØµçÑ¹ µ¥Î»£ºV
+    DataScope_Get_Channel_Data( 0, 1 );       //æ˜¾ç¤ºè§’åº¦ å•ä½ï¼šåº¦ï¼ˆÂ°ï¼‰
+    DataScope_Get_Channel_Data( 0, 2 );         //æ˜¾ç¤ºè¶…å£°æ³¢æµ‹é‡çš„è·ç¦» å•ä½ï¼šCM
+    DataScope_Get_Channel_Data( 0, 3 );                 //æ˜¾ç¤ºç”µæ± ç”µå‹ å•ä½ï¼šV
 //      DataScope_Get_Channel_Data( 0 , 4 );
-//      DataScope_Get_Channel_Data(0, 5 ); //ÓÃÄúÒªÏÔÊ¾µÄÊı¾İÌæ»»0¾ÍĞĞÁË
-//      DataScope_Get_Channel_Data(0 , 6 );//ÓÃÄúÒªÏÔÊ¾µÄÊı¾İÌæ»»0¾ÍĞĞÁË
+//      DataScope_Get_Channel_Data(0, 5 ); //ç”¨æ‚¨è¦æ˜¾ç¤ºçš„æ•°æ®æ›¿æ¢0å°±è¡Œäº†
+//      DataScope_Get_Channel_Data(0 , 6 );//ç”¨æ‚¨è¦æ˜¾ç¤ºçš„æ•°æ®æ›¿æ¢0å°±è¡Œäº†
 //      DataScope_Get_Channel_Data(0, 7 );
 //      DataScope_Get_Channel_Data( 0, 8 );
 //      DataScope_Get_Channel_Data(0, 9 );

@@ -31,41 +31,41 @@
  */
 #include "board.h"
 u8 Car_Mode=Akm_Car;
-int Motor_Left,Motor_Right;                 //µç»úPWM±äÁ¿ Ó¦ÊÇMotorµÄ
-u8 PID_Send;            //ÑÓÊ±ºÍµ÷²ÎÏà¹Ø±äÁ¿
-float RC_Velocity=200,RC_Turn_Velocity,Move_X,Move_Y,Move_Z,PS2_ON_Flag;               //Ò£¿Ø¿ØÖÆµÄËÙ¶È
-float Velocity_Left,Velocity_Right; //³µÂÖËÙ¶È(mm/s)
+int Motor_Left,Motor_Right;                 //ç”µæœºPWMå˜é‡ åº”æ˜¯Motorçš„
+u8 PID_Send;            //å»¶æ—¶å’Œè°ƒå‚ç›¸å…³å˜é‡
+float RC_Velocity=200,RC_Turn_Velocity,Move_X,Move_Y,Move_Z,PS2_ON_Flag;               //é¥æ§æ§åˆ¶çš„é€Ÿåº¦
+float Velocity_Left,Velocity_Right; //è½¦è½®é€Ÿåº¦(mm/s)
 u16 test_num,show_cnt;
 float Voltage=0;
 int Servo_Init=1500;
 int main(void)
 {
-    // ÏµÍ³³õÊ¼»¯
-    SYSCFG_DL_init();  // ³õÊ¼»¯ÏµÍ³ÅäÖÃ
-    // Çå³ıËùÓĞÍâÉèµÄÖĞ¶Ï¹ÒÆğ×´Ì¬
-    NVIC_ClearPendingIRQ(ENCODERA_INT_IRQN);    // ±àÂëÆ÷AÖĞ¶Ï
-    NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);    // ±àÂëÆ÷BÖĞ¶Ï
-    NVIC_ClearPendingIRQ(UART_0_INST_INT_IRQN);  // UART0´®¿ÚÖĞ¶Ï
-    NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);  // UART1´®¿ÚÖĞ¶Ï
-    // Ê¹ÄÜ¸÷ÍâÉèµÄÖĞ¶Ï
-    NVIC_EnableIRQ(ENCODERA_INT_IRQN);    // ¿ªÆô±àÂëÆ÷AÖĞ¶Ï
-    NVIC_EnableIRQ(ENCODERB_INT_IRQN);    // ¿ªÆô±àÂëÆ÷BÖĞ¶Ï
-    NVIC_EnableIRQ(UART_0_INST_INT_IRQN); // ¿ªÆôUART0ÖĞ¶Ï
-    NVIC_EnableIRQ(UART_1_INST_INT_IRQN); // ¿ªÆôUART1ÖĞ¶Ï
-    // ¶¨Ê±Æ÷ºÍADCÏà¹ØÖĞ¶ÏÅäÖÃ
-    NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);  // Çå³ı¶¨Ê±Æ÷0ÖĞ¶Ï¹ÒÆğ
-    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);        // ¿ªÆô¶¨Ê±Æ÷0ÖĞ¶Ï
+    // ç³»ç»Ÿåˆå§‹åŒ–
+    SYSCFG_DL_init();  // åˆå§‹åŒ–ç³»ç»Ÿé…ç½®
+    // æ¸…é™¤æ‰€æœ‰å¤–è®¾çš„ä¸­æ–­æŒ‚èµ·çŠ¶æ€
+    NVIC_ClearPendingIRQ(ENCODERA_INT_IRQN);    // ç¼–ç å™¨Aä¸­æ–­
+    NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);    // ç¼–ç å™¨Bä¸­æ–­
+    NVIC_ClearPendingIRQ(UART_0_INST_INT_IRQN);  // UART0ä¸²å£ä¸­æ–­
+    NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);  // UART1ä¸²å£ä¸­æ–­
+    // ä½¿èƒ½å„å¤–è®¾çš„ä¸­æ–­
+    NVIC_EnableIRQ(ENCODERA_INT_IRQN);    // å¼€å¯ç¼–ç å™¨Aä¸­æ–­
+    NVIC_EnableIRQ(ENCODERB_INT_IRQN);    // å¼€å¯ç¼–ç å™¨Bä¸­æ–­
+    NVIC_EnableIRQ(UART_0_INST_INT_IRQN); // å¼€å¯UART0ä¸­æ–­
+    NVIC_EnableIRQ(UART_1_INST_INT_IRQN); // å¼€å¯UART1ä¸­æ–­
+    // å®šæ—¶å™¨å’ŒADCç›¸å…³ä¸­æ–­é…ç½®
+    NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);  // æ¸…é™¤å®šæ—¶å™¨0ä¸­æ–­æŒ‚èµ·
+    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);        // å¼€å¯å®šæ—¶å™¨0ä¸­æ–­
     NVIC_EnableIRQ(ADC12_VOLTAGE_INST_INT_IRQN);
-    OLED_Init();  // ³õÊ¼»¯OLEDÏÔÊ¾ÆÁ
-	//¶æ»ú³õÊ¼»¯»Ø¹éÖĞÎ»
+    OLED_Init();  // åˆå§‹åŒ–OLEDæ˜¾ç¤ºå±
+	//èˆµæœºåˆå§‹åŒ–å›å½’ä¸­ä½
 	DL_Timer_setCaptureCompareValue(PWM_1_INST,Servo_Init,GPIO_PWM_1_C0_IDX);
-    // Ö÷Ñ­»·
+    // ä¸»å¾ªç¯
     while (1) 
     {
-		Voltage = Get_battery_volt();//²ÉÑùĞ¡³µµ±Ç°µçÑ¹
-        BTBufferHandler();    // ´¦ÀíÀ¶ÑÀÊı¾İ»º³åÇø
-        oled_show();         //  OLEDÏÔÊ¾¸üĞÂ
-        APP_Show();          //  APPÏÔÊ¾´¦Àí
+		Voltage = Get_battery_volt();//é‡‡æ ·å°è½¦å½“å‰ç”µå‹
+        BTBufferHandler();    // å¤„ç†è“ç‰™æ•°æ®ç¼“å†²åŒº
+        oled_show();         //  OLEDæ˜¾ç¤ºæ›´æ–°
+        APP_Show();          //  APPæ˜¾ç¤ºå¤„ç†
     }
 }
 

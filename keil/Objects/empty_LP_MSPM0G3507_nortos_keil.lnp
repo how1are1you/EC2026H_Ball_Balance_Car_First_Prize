@@ -32,6 +32,7 @@
 ".\objects\motor.o"
 ".\objects\encoder.o"
 ".\objects\adc.o"
+".\objects\ir_module.o"
 ".\objects\control.o"
 ".\objects\show.o"
 ".\objects\datascope_dp.o"

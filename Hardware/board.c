@@ -7,10 +7,10 @@ volatile uint32_t start_time;
 
 
 
-//printfº¯ÊıÖØ¶¨Òå
+//printfå‡½æ•°é‡å®šä¹‰
 int fputc(int ch, FILE *stream)
 {
-	//µ±´®¿Ú0Ã¦µÄÊ±ºòµÈ´ı£¬²»Ã¦µÄÊ±ºòÔÙ·¢ËÍ´«½øÀ´µÄ×Ö·û
+	//å½“ä¸²å£0å¿™çš„æ—¶å€™ç­‰å¾…ï¼Œä¸å¿™çš„æ—¶å€™å†å‘é€ä¼ è¿›æ¥çš„å­—ç¬¦
 	while( DL_UART_isBusy(UART_1_INST) == true );
 
 	DL_UART_Main_transmitDataBlocking(UART_1_INST, ch);
@@ -37,17 +37,17 @@ int puts(const char *_ptr)
 }
 
 
-//·µ»ØSysTick¼ÆÊıÖµ
+//è¿”å›SysTickè®¡æ•°å€¼
 uint32_t Systick_getTick(void)
 {
 	return (SysTick->VAL);
 }
 
 
-//ms×èÈûÑÓ³Ù
+//msé˜»å¡å»¶è¿Ÿ
 void delay_ms(uint32_t ms)
 {
-	//³¬³öÄÜÂú×ãµÄ×î´óÑÓ³Ù
+	//è¶…å‡ºèƒ½æ»¡è¶³çš„æœ€å¤§å»¶è¿Ÿ
 	//if( ms > SysTickMAX_COUNT/(SysTickFre/1000) ) ms = SysTickMAX_COUNT/(SysTickFre/1000);
 	for(int i=0;i<1000;i++)
 	{
@@ -60,24 +60,24 @@ void delay_us(uint32_t us)
 {
 	if( us > SysTickMAX_COUNT/(SysTickFre/1000000) ) us = SysTickMAX_COUNT/(SysTickFre/1000000);
 	
-	us = us*(SysTickFre/1000000); //µ¥Î»×ª»»
+	us = us*(SysTickFre/1000000); //å•ä½è½¬æ¢
 	
-	//ÓÃÓÚ±£´æÒÑ×ß¹ıµÄÊ±¼ä
+	//ç”¨äºä¿å­˜å·²èµ°è¿‡çš„æ—¶é—´
 	uint32_t runningtime = 0;
 	
-	//»ñµÃµ±Ç°Ê±¿ÌµÄ¼ÆÊıÖµ
+	//è·å¾—å½“å‰æ—¶åˆ»çš„è®¡æ•°å€¼
 	uint32_t InserTick = Systick_getTick();
 	
-	//ÓÃÓÚË¢ĞÂÊµÊ±Ê±¼ä
+	//ç”¨äºåˆ·æ–°å®æ—¶æ—¶é—´
 	uint32_t tick = 0;
 	
 	uint8_t countflag = 0;
-	//µÈ´ıÑÓ³Ù
+	//ç­‰å¾…å»¶è¿Ÿ
 	while(1)
 	{
-		tick = Systick_getTick();//Ë¢ĞÂµ±Ç°Ê±¿Ì¼ÆÊıÖµ
+		tick = Systick_getTick();//åˆ·æ–°å½“å‰æ—¶åˆ»è®¡æ•°å€¼
 		
-		if( tick > InserTick ) countflag = 1;//³öÏÖÒç³öÂÖÑ¯,ÔòÇĞ»»×ßÊ±µÄ¼ÆËã·½Ê½
+		if( tick > InserTick ) countflag = 1;//å‡ºç°æº¢å‡ºè½®è¯¢,åˆ™åˆ‡æ¢èµ°æ—¶çš„è®¡ç®—æ–¹å¼
 		
 		if( countflag ) runningtime = InserTick + SysTickMAX_COUNT - tick;
 		else runningtime = InserTick - tick;

@@ -7,51 +7,51 @@ uint8_t keyValue(void)
 
 UserKeyState_t key_scan(uint16_t freq)
 {
-    static uint16_t time_core;//×ßÊ±ºËĞÄ
-    static uint16_t long_press_time;//³¤°´Ê¶±ğ
-    static uint8_t press_flag=0;//°´¼ü°´ÏÂ±ê¼Ç
-    static uint8_t check_once=0;//ÊÇ·ñÒÑ¾­Ê¶±ğ1´Î±ê¼Ç
+    static uint16_t time_core;//èµ°æ—¶æ ¸å¿ƒ
+    static uint16_t long_press_time;//é•¿æŒ‰è¯†åˆ«
+    static uint8_t press_flag=0;//æŒ‰é”®æŒ‰ä¸‹æ ‡è®°
+    static uint8_t check_once=0;//æ˜¯å¦å·²ç»è¯†åˆ«1æ¬¡æ ‡è®°
 	
-    float Count_time = (((float)(1.0f/(float)freq))*1000.0f);//Ëã³ö¼Æ1ĞèÒª¶àÉÙ¸öºÁÃë
+    float Count_time = (((float)(1.0f/(float)freq))*1000.0f);//ç®—å‡ºè®¡1éœ€è¦å¤šå°‘ä¸ªæ¯«ç§’
 
-    if(check_once)//Íê³ÉÁËÊ¶±ğ£¬ÔòÇå¿ÕËùÓĞ±äÁ¿
+    if(check_once)//å®Œæˆäº†è¯†åˆ«ï¼Œåˆ™æ¸…ç©ºæ‰€æœ‰å˜é‡
     {
-        press_flag=0;//Íê³ÉÁË1´ÎÊ¶±ğ£¬±ê¼ÇÇåÁã
-        time_core=0;//Íê³ÉÁË1´ÎÊ¶±ğ£¬Ê±¼äÇåÁã
-        long_press_time=0;//Íê³ÉÁË1´ÎÊ¶±ğ£¬Ê±¼äÇåÁã
+        press_flag=0;//å®Œæˆäº†1æ¬¡è¯†åˆ«ï¼Œæ ‡è®°æ¸…é›¶
+        time_core=0;//å®Œæˆäº†1æ¬¡è¯†åˆ«ï¼Œæ—¶é—´æ¸…é›¶
+        long_press_time=0;//å®Œæˆäº†1æ¬¡è¯†åˆ«ï¼Œæ—¶é—´æ¸…é›¶
     }
-    if(check_once&&1 == keyValue()) check_once=0; //Íê³ÉÉ¨Ãèºó°´¼ü±»µ¯Æğ£¬Ôò¿ªÆôÏÂÒ»´ÎÉ¨Ãè
+    if(check_once&&1 == keyValue()) check_once=0; //å®Œæˆæ‰«æåæŒ‰é”®è¢«å¼¹èµ·ï¼Œåˆ™å¼€å¯ä¸‹ä¸€æ¬¡æ‰«æ
 
-    if(0==keyValue()&&check_once==0)//°´¼üÉ¨Ãè
+    if(0==keyValue()&&check_once==0)//æŒ‰é”®æ‰«æ
     {
-        press_flag=1;//±ê¼Ç±»°´ÏÂ1´Î
+        press_flag=1;//æ ‡è®°è¢«æŒ‰ä¸‹1æ¬¡
         long_press_time++;		  
     }
 
-    if(long_press_time>(uint16_t)(500.0f/Count_time))// ³¤°´1Ãë
+    if(long_press_time>(uint16_t)(500.0f/Count_time))// é•¿æŒ‰1ç§’
     {	
-        check_once=1;//±ê¼ÇÒÑ±»Ê¶±ğ
-        return USEKEY_long_click; //³¤°´
+        check_once=1;//æ ‡è®°å·²è¢«è¯†åˆ«
+        return USEKEY_long_click; //é•¿æŒ‰
     }
 
-    //°´¼ü±»°´ÏÂ1´ÎÓÖµ¯Æğºó£¬¿ªÆôÄÚºË×ßÊ±
+    //æŒ‰é”®è¢«æŒ‰ä¸‹1æ¬¡åˆå¼¹èµ·åï¼Œå¼€å¯å†…æ ¸èµ°æ—¶
     if(press_flag&&1==keyValue())
     {
         time_core++; 
     }		
 	
-    if(press_flag&&(time_core>(uint16_t)(50.0f/Count_time)&&time_core<(uint16_t)(300.0f/Count_time)))//50~700msÄÚ±»ÔÙ´Î°´ÏÂ
+    if(press_flag&&(time_core>(uint16_t)(50.0f/Count_time)&&time_core<(uint16_t)(300.0f/Count_time)))//50~700mså†…è¢«å†æ¬¡æŒ‰ä¸‹
     {
-        if(0==keyValue()) //Èç¹ûÔÙ´Î°´ÏÂ
+        if(0==keyValue()) //å¦‚æœå†æ¬¡æŒ‰ä¸‹
         {
-            check_once=1;//±ê¼ÇÒÑ±»Ê¶±ğ
-            return USEKEY_double_click; //±ê¼ÇÎªË«»÷
+            check_once=1;//æ ‡è®°å·²è¢«è¯†åˆ«
+            return USEKEY_double_click; //æ ‡è®°ä¸ºåŒå‡»
         }
     }
     else if(press_flag&&time_core>(uint16_t)(300.0f/Count_time))
     {
-        check_once=1;//±ê¼ÇÒÑ±»Ê¶±ğ
-        return USEKEY_single_click; //800msºó»¹Ã»±»°´ÏÂ£¬ÔòÊÇµ¥»÷
+        check_once=1;//æ ‡è®°å·²è¢«è¯†åˆ«
+        return USEKEY_single_click; //800msåè¿˜æ²¡è¢«æŒ‰ä¸‹ï¼Œåˆ™æ˜¯å•å‡»
     }
 
     return USEKEY_stateless;

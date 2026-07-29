@@ -264,6 +264,22 @@ extern "C" {
 #define ENCODERB_E2B_IIDX                                   (DL_GPIO_IIDX_DIO24)
 #define ENCODERB_E2B_PIN                                        (DL_GPIO_PIN_24)
 #define ENCODERB_E2B_IOMUX                                       (IOMUX_PINCM52)
+/* Defines for DH1: GPIOA.27 with pinCMx 60 on package pin 31 */
+#define LF04_DH1_PORT                                                    (GPIOA)
+#define LF04_DH1_PIN                                            (DL_GPIO_PIN_27)
+#define LF04_DH1_IOMUX                                           (IOMUX_PINCM60)
+/* Defines for DH2: GPIOA.12 with pinCMx 34 on package pin 5 */
+#define LF04_DH2_PORT                                                    (GPIOA)
+#define LF04_DH2_PIN                                            (DL_GPIO_PIN_12)
+#define LF04_DH2_IOMUX                                           (IOMUX_PINCM34)
+/* Defines for DH3: GPIOB.16 with pinCMx 33 on package pin 4 */
+#define LF04_DH3_PORT                                                    (GPIOB)
+#define LF04_DH3_PIN                                            (DL_GPIO_PIN_16)
+#define LF04_DH3_IOMUX                                           (IOMUX_PINCM33)
+/* Defines for DH4: GPIOB.17 with pinCMx 43 on package pin 14 */
+#define LF04_DH4_PORT                                                    (GPIOB)
+#define LF04_DH4_PIN                                            (DL_GPIO_PIN_17)
+#define LF04_DH4_IOMUX                                           (IOMUX_PINCM43)
 
 
 

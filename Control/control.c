@@ -1,11 +1,11 @@
 /***********************************************
-¹«Ë¾£ºÂÖÈ¤¿Æ¼¼£¨¶«İ¸£©ÓĞÏŞ¹«Ë¾
-Æ·ÅÆ£ºWHEELTEC
-¹ÙÍø£ºwheeltec.net
-ÌÔ±¦µêÆÌ£ºshop114407458.taobao.com
-ËÙÂôÍ¨: https://minibalance.aliexpress.com/store/4455017
-°æ±¾£º5.7
-ĞŞ¸ÄÊ±¼ä£º2021-04-29
+å…¬å¸ï¼šè½®è¶£ç§‘æŠ€ï¼ˆä¸œèï¼‰æœ‰é™å…¬å¸
+å“ç‰Œï¼šWHEELTEC
+å®˜ç½‘ï¼šwheeltec.net
+æ·˜å®åº—é“ºï¼šshop114407458.taobao.com
+é€Ÿå–é€š: https://minibalance.aliexpress.com/store/4455017
+ç‰ˆæœ¬ï¼š5.7
+ä¿®æ”¹æ—¶é—´ï¼š2021-04-29
 
 
 Brand: WHEELTEC
@@ -13,22 +13,26 @@ Website: wheeltec.net
 Taobao shop: shop114407458.taobao.com
 Aliexpress: https://minibalance.aliexpress.com/store/4455017
 Version: 5.7
-Update£º2021-04-29
+Updateï¼š2021-04-29
 
 All rights reserved
 ***********************************************/
 #include "control.h"
+#include "IR_Module.h"
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
 int Servo=1500;
-Encoder OriginalEncoder; 					//±àÂëÆ÷Ô­Ê¼Êı¾İ   
-Motor_parameter MotorA,MotorB;				//×óÓÒµç»úÏà¹Ø±äÁ¿
+Encoder OriginalEncoder; 					//ç¼–ç å™¨åŸå§‹æ•°æ®   
+Motor_parameter MotorA,MotorB;				//å·¦å³ç”µæœºç›¸å…³å˜é‡
 float Velocity_KP=400,Velocity_KI=300;	
-int Run_Mode=0;//Ğ¡³µÔËĞĞÄ£Ê½
-u8 Flag_Stop=1;//Ğ¡³µÆô¶¯±êÖ¾Î»
+int Run_Mode=0;//å°è½¦è¿è¡Œæ¨¡å¼
+u8 Flag_Stop=1;//å°è½¦å¯åŠ¨æ ‡å¿—ä½
+static u8 Reset_Left_PI, Reset_Right_PI;
 void TIMER_0_INST_IRQHandler(void)
 {
+    static int lastRunMode = -1;
+
     if(DL_TimerA_getPendingInterrupt(TIMER_0_INST))
     {
         if(DL_TIMER_IIDX_ZERO)
@@ -38,20 +42,30 @@ void TIMER_0_INST_IRQHandler(void)
 			LED_Flash(100);
 			Get_Velocity_From_Encoder(Get_Encoder_countA,Get_Encoder_countB);
 			Get_Encoder_countA=Get_Encoder_countB=0;
+			if (Run_Mode != lastRunMode)
+			{
+				Reset_Velocity_PI();
+				IR_Ackermann_LineTrack_Reset();
+				lastRunMode = Run_Mode;
+			}
+			if (Flag_Stop)
+			{
+				Reset_Velocity_PI();
+				IR_Ackermann_LineTrack_Reset();
+				Set_PWM(0,0,0);
+				return;
+			}
 			if(Run_Mode==0)
 			{
-				Get_RC();         //Handle the APP remote commands //´¦ÀíAPPÒ£¿ØÃüÁî
+				Get_RC();         //Handle the APP remote commands //å¤„ç†APPé¥æ§å‘½ä»¤
 			}else if(Run_Mode==1){
-				//¿ÉÓÚ´Ë´¦Ìí¼ÓĞÂÄ£Ê½
+				IR_Ackermann_LineTrack();
 			}
-//			//¼ÆËã×óÓÒµç»ú¶ÔÓ¦µÄPWM
+//			//è®¡ç®—å·¦å³ç”µæœºå¯¹åº”çš„PWM
 			MotorA.Motor_Pwm = Incremental_PI_Left(MotorA.Current_Encoder,MotorA.Target_Encoder);	
 			MotorB.Motor_Pwm = Incremental_PI_Right(MotorB.Current_Encoder,MotorB.Target_Encoder);
 			Limit_Pwm(7500) ;
-			if(!Flag_Stop)
-			{
-				Set_PWM(MotorA.Motor_Pwm,MotorB.Motor_Pwm,Servo);
-			}else Set_PWM(0,0,0);
+			Set_PWM(MotorA.Motor_Pwm,MotorB.Motor_Pwm,Servo);
 		}
     }
 }
@@ -60,51 +74,51 @@ void TIMER_0_INST_IRQHandler(void)
 Function: Get_Velocity_From_Encoder
 Input   : none
 Output  : none
-º¯Êı¹¦ÄÜ£º¶ÁÈ¡±àÂëÆ÷ºÍ×ª»»³ÉËÙ¶È
-Èë¿Ú²ÎÊı: ÎŞ 
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šè¯»å–ç¼–ç å™¨å’Œè½¬æ¢æˆé€Ÿåº¦
+å…¥å£å‚æ•°: æ—  
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/	 	
 void Get_Velocity_From_Encoder(int Encoder1,int Encoder2)
 {
 	
 	//Retrieves the original data of the encoder
-	//»ñÈ¡±àÂëÆ÷µÄÔ­Ê¼Êı¾İ
+	//è·å–ç¼–ç å™¨çš„åŸå§‹æ•°æ®
 	float Encoder_A_pr,Encoder_B_pr; 
 	OriginalEncoder.A=-Encoder1;	
 	OriginalEncoder.B=-Encoder2;	
 	Encoder_A_pr=OriginalEncoder.A; Encoder_B_pr=-OriginalEncoder.B;
-	//±àÂëÆ÷Ô­Ê¼Êı¾İ×ª»»Îª³µÂÖËÙ¶È£¬µ¥Î»m/s
-	MotorA.Current_Encoder= Encoder_A_pr*Frequency*Perimeter/728.0f;  //2±¶Æµ*28¼õËÙ±È*13ÏßÊı
+	//ç¼–ç å™¨åŸå§‹æ•°æ®è½¬æ¢ä¸ºè½¦è½®é€Ÿåº¦ï¼Œå•ä½m/s
+	MotorA.Current_Encoder= Encoder_A_pr*Frequency*Perimeter/728.0f;  //2å€é¢‘*28å‡é€Ÿæ¯”*13çº¿æ•°
 	MotorB.Current_Encoder= Encoder_B_pr*Frequency*Perimeter/728.0f;   //2*28*13=728
 	
 }
-//ÔË¶¯Ñ§Äæ½â£¬ÓÉxºÍyµÄËÙ¶ÈµÃµ½±àÂëÆ÷µÄËÙ¶È,VxÊÇm/s,Vzµ¥Î»ÊÇ¶È/s(½Ç¶ÈÖÆ)
+//è¿åŠ¨å­¦é€†è§£ï¼Œç”±xå’Œyçš„é€Ÿåº¦å¾—åˆ°ç¼–ç å™¨çš„é€Ÿåº¦,Vxæ˜¯m/s,Vzå•ä½æ˜¯åº¦/s(è§’åº¦åˆ¶)
 void Get_Target_Encoder(float Vx,float Vz)
 {
-	float amplitude=3.5f; //Wheel target speed limit //³µÂÖÄ¿±êËÙ¶ÈÏŞ·ù
+	float amplitude=3.5f; //Wheel target speed limit //è½¦è½®ç›®æ ‡é€Ÿåº¦é™å¹…
 	float R, AngleR;
 		
 	// For Ackerman small car, Vz represents the front wheel steering Angle
-	//¶ÔÓÚ°¢¿ËÂüĞ¡³µVz´ú±íÓÒÇ°ÂÖ×ªÏò½Ç¶È
+	//å¯¹äºé˜¿å…‹æ›¼å°è½¦Vzä»£è¡¨å³å‰è½®è½¬å‘è§’åº¦
 	AngleR=Vz;
 	
 	// Front wheel steering Angle limit (front wheel steering Angle controlled by steering engine), unit: rad
-	//Ç°ÂÖ×ªÏò½Ç¶ÈÏŞ·ù(¶æ»ú¿ØÖÆÇ°ÂÖ×ªÏò½Ç¶È)£¬µ¥Î»£ºrad
-	AngleR=target_limit_float(AngleR,-0.52f,0.48f); //ÏŞ·ùÔÚ×óÓÒ30¡ã
+	//å‰è½®è½¬å‘è§’åº¦é™å¹…(èˆµæœºæ§åˆ¶å‰è½®è½¬å‘è§’åº¦)ï¼Œå•ä½ï¼šrad
+	AngleR=target_limit_float(AngleR,-0.52f,0.48f); //é™å¹…åœ¨å·¦å³30Â°
 	
-	//¼ÆËã×ªÍä°ë¾¶
+	//è®¡ç®—è½¬å¼¯åŠå¾„
 	R=Axle_spacing/tan(AngleR)-0.5f*Wheel_spacing;
 	
-	//Inverse kinematics //ÔË¶¯Ñ§Äæ½â
+	//Inverse kinematics //è¿åŠ¨å­¦é€†è§£
 	if(AngleR!=0)
 	{
 		
 		MotorA.Target_Encoder = Vx*(R-0.5f*Wheel_spacing)/R;
 		MotorB.Target_Encoder = Vx*(R+0.5f*Wheel_spacing)/R;	
-		//¶æ»úÓë½Ç¶ÈµÄ¹ØÏµ¹«Ê½£¬ÓÉ²É¼¯Êı¾İ×éºó3´ÎÄâºÏµÃ³ö
-		//´ÖÂÔÄâºÏ,8×éÊı¾İ
-		//Servo = 1.49e+03f + 1.01e+03f*AngleR + (-3.73e+02f)*pow(AngleR,2) + 4.21e+02f*pow(AngleR,3) + 10 ; //10ÎªÆ«²îÖµ
-		//¾«Ï¸ÄâºÏ,14×éÊı¾İ
+		//èˆµæœºä¸è§’åº¦çš„å…³ç³»å…¬å¼ï¼Œç”±é‡‡é›†æ•°æ®ç»„å3æ¬¡æ‹Ÿåˆå¾—å‡º
+		//ç²—ç•¥æ‹Ÿåˆ,8ç»„æ•°æ®
+		//Servo = 1.49e+03f + 1.01e+03f*AngleR + (-3.73e+02f)*pow(AngleR,2) + 4.21e+02f*pow(AngleR,3) + 10 ; //10ä¸ºåå·®å€¼
+		//ç²¾ç»†æ‹Ÿåˆ,14ç»„æ•°æ®
 		Servo = 1.47e+03f + 8.90e+02f*AngleR + (-2.28e+01f)*pow(AngleR,2) + 4.44e+02f*pow(AngleR,3) ;			
 	}
 	else 
@@ -120,11 +134,11 @@ void Get_Target_Encoder(float Vx,float Vz)
 
 /**************************************************************************
 Function: Absolute value function
-Input   : a£ºNumber to be converted
+Input   : aï¼šNumber to be converted
 Output  : unsigned int
-º¯Êı¹¦ÄÜ£º¾ø¶ÔÖµº¯Êı
-Èë¿Ú²ÎÊı£ºa£ºĞèÒª¼ÆËã¾ø¶ÔÖµµÄÊı
-·µ»Ø  Öµ£ºÎŞ·ûºÅÕûĞÍ
+å‡½æ•°åŠŸèƒ½ï¼šç»å¯¹å€¼å‡½æ•°
+å…¥å£å‚æ•°ï¼šaï¼šéœ€è¦è®¡ç®—ç»å¯¹å€¼çš„æ•°
+è¿”å›  å€¼ï¼šæ— ç¬¦å·æ•´å‹
 **************************************************************************/
 int myabs(int a)
 {
@@ -137,7 +151,7 @@ int myabs(int a)
 int Turn_Off(void)
 {
 	u8 temp = 0;
-//	if(Voltage>700&&EN==0)//µçÑ¹¸ßÓÚ7VÇÒÊ¹ÄÜ¿ª¹Ø´ò¿ª
+//	if(Voltage>700&&EN==0)//ç”µå‹é«˜äº7Vä¸”ä½¿èƒ½å¼€å…³æ‰“å¼€
 //	{
 //		temp = 1;
 //	}
@@ -147,9 +161,9 @@ int Turn_Off(void)
 Function: PWM_Limit
 Input   : IN;max;min
 Output  : OUT
-º¯Êı¹¦ÄÜ£ºÏŞÖÆPWM¸³Öµ
-Èë¿Ú²ÎÊı: IN£ºÊäÈë²ÎÊı  max£ºÏŞ·ù×î´óÖµ  min£ºÏŞ·ù×îĞ¡Öµ 
-·µ»Ø  Öµ£ºÏŞ·ùºóµÄÖµ
+å‡½æ•°åŠŸèƒ½ï¼šé™åˆ¶PWMèµ‹å€¼
+å…¥å£å‚æ•°: INï¼šè¾“å…¥å‚æ•°  maxï¼šé™å¹…æœ€å¤§å€¼  minï¼šé™å¹…æœ€å°å€¼ 
+è¿”å›  å€¼ï¼šé™å¹…åçš„å€¼
 **************************************************************************/	 	
 float PWM_Limit(float IN,float max,float min)
 {
@@ -159,51 +173,73 @@ float PWM_Limit(float IN,float max,float min)
 	return OUT;
 }
 /**************************************************************************
-º¯Êı¹¦ÄÜ£ºÔöÁ¿PI¿ØÖÆÆ÷
-Èë¿Ú²ÎÊı£º±àÂëÆ÷²âÁ¿Öµ£¬Ä¿±êËÙ¶È
-·µ»Ø  Öµ£ºµç»úPWM
-¸ù¾İÔöÁ¿Ê½ÀëÉ¢PID¹«Ê½ 
-pwm+=Kp[e£¨k£©-e(k-1)]+Ki*e(k)+Kd[e(k)-2e(k-1)+e(k-2)]
-e(k)´ú±í±¾´ÎÆ«²î 
-e(k-1)´ú±íÉÏÒ»´ÎµÄÆ«²î  ÒÔ´ËÀàÍÆ 
-pwm´ú±íÔöÁ¿Êä³ö
-ÔÚÎÒÃÇµÄËÙ¶È¿ØÖÆ±Õ»·ÏµÍ³ÀïÃæ£¬Ö»Ê¹ÓÃPI¿ØÖÆ
-pwm+=Kp[e£¨k£©-e(k-1)]+Ki*e(k)
+å‡½æ•°åŠŸèƒ½ï¼šå¢é‡PIæ§åˆ¶å™¨
+å…¥å£å‚æ•°ï¼šç¼–ç å™¨æµ‹é‡å€¼ï¼Œç›®æ ‡é€Ÿåº¦
+è¿”å›  å€¼ï¼šç”µæœºPWM
+æ ¹æ®å¢é‡å¼ç¦»æ•£PIDå…¬å¼ 
+pwm+=Kp[eï¼ˆkï¼‰-e(k-1)]+Ki*e(k)+Kd[e(k)-2e(k-1)+e(k-2)]
+e(k)ä»£è¡¨æœ¬æ¬¡åå·® 
+e(k-1)ä»£è¡¨ä¸Šä¸€æ¬¡çš„åå·®  ä»¥æ­¤ç±»æ¨ 
+pwmä»£è¡¨å¢é‡è¾“å‡º
+åœ¨æˆ‘ä»¬çš„é€Ÿåº¦æ§åˆ¶é—­ç¯ç³»ç»Ÿé‡Œé¢ï¼Œåªä½¿ç”¨PIæ§åˆ¶
+pwm+=Kp[eï¼ˆkï¼‰-e(k-1)]+Ki*e(k)
 **************************************************************************/
 int Incremental_PI_Left (float Encoder,float Target)
 { 	
 	 static float Bias,Pwm,Last_bias;
-	 Bias=Target-Encoder;                					//¼ÆËãÆ«²î
-	 Pwm+=Velocity_KP*(Bias-Last_bias)+Velocity_KI*Bias;   	//ÔöÁ¿Ê½PI¿ØÖÆÆ÷
+	 if (Reset_Left_PI)
+	 {
+	 	Bias = 0.0f;
+	 	Pwm = 0.0f;
+	 	Last_bias = 0.0f;
+	 	Reset_Left_PI = 0;
+	 }
+	 Bias=Target-Encoder;                					//è®¡ç®—åå·®
+	 Pwm+=Velocity_KP*(Bias-Last_bias)+Velocity_KI*Bias;   	//å¢é‡å¼PIæ§åˆ¶å™¨
 	 if(Pwm>7800)Pwm=7800;
 	 if(Pwm<-7800)Pwm=-7800;
-	 Last_bias=Bias;	                   					//±£´æÉÏÒ»´ÎÆ«²î 
-	 return Pwm;                         					//ÔöÁ¿Êä³ö
+	 Last_bias=Bias;	                   					//ä¿å­˜ä¸Šä¸€æ¬¡åå·® 
+	 return Pwm;                         					//å¢é‡è¾“å‡º
 }
 
 
 int Incremental_PI_Right (float Encoder,float Target)
 { 	
 	 static float Bias,Pwm,Last_bias;
-	 Bias=Target-Encoder;                					//¼ÆËãÆ«²î
-	 Pwm+=Velocity_KP*(Bias-Last_bias)+Velocity_KI*Bias;   	//ÔöÁ¿Ê½PI¿ØÖÆÆ÷
+	 if (Reset_Right_PI)
+	 {
+	 	Bias = 0.0f;
+	 	Pwm = 0.0f;
+	 	Last_bias = 0.0f;
+	 	Reset_Right_PI = 0;
+	 }
+	 Bias=Target-Encoder;                					//è®¡ç®—åå·®
+	 Pwm+=Velocity_KP*(Bias-Last_bias)+Velocity_KI*Bias;   	//å¢é‡å¼PIæ§åˆ¶å™¨
 	 if(Pwm>7800)Pwm=7800;
 	 if(Pwm<-7800)Pwm=-7800;
-	 Last_bias=Bias;	                   					//±£´æÉÏÒ»´ÎÆ«²î 
-	 return Pwm;                         					//ÔöÁ¿Êä³ö
+	 Last_bias=Bias;	                   					//ä¿å­˜ä¸Šä¸€æ¬¡åå·® 
+	 return Pwm;                         					//å¢é‡è¾“å‡º
+}
+
+void Reset_Velocity_PI(void)
+{
+	Reset_Left_PI = 1;
+	Reset_Right_PI = 1;
+	MotorA.Motor_Pwm = 0.0f;
+	MotorB.Motor_Pwm = 0.0f;
 }
 /**************************************************************************
 Function: Processes the command sent by APP through usart 2
 Input   : none
 Output  : none
-º¯Êı¹¦ÄÜ£º¶ÔAPPÍ¨¹ı´®¿Ú2·¢ËÍ¹ıÀ´µÄÃüÁî½øĞĞ´¦Àí
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šå¯¹APPé€šè¿‡ä¸²å£2å‘é€è¿‡æ¥çš„å‘½ä»¤è¿›è¡Œå¤„ç†
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void Get_RC(void)
 {
 	u8 Flag_Move=1;
-	 switch(Flag_Direction) //Handle direction control commands //´¦Àí·½Ïò¿ØÖÆÃüÁî
+	 switch(Flag_Direction) //Handle direction control commands //å¤„ç†æ–¹å‘æ§åˆ¶å‘½ä»¤
 	 { 
 			case 1:      Move_X=+RC_Velocity;  	 Move_Z=0;         break;
 			case 2:      Move_X=+RC_Velocity;  	 Move_Z=-PI/2;   	 break;
@@ -215,19 +251,19 @@ void Get_RC(void)
 			case 8:      Move_X=+RC_Velocity; 	 Move_Z=+PI/2;     break; 
 			default:     Move_X=0;               Move_Z=0;         break;
 	 }
-	 if     (Flag_Left ==1)  Move_Z= PI/2; //left rotation  //×ó×Ô×ª 
-	 else if(Flag_Right==1)  Move_Z=-PI/2; //right rotation //ÓÒ×Ô×ª	
+	 if     (Flag_Left ==1)  Move_Z= PI/2; //left rotation  //å·¦è‡ªè½¬ 
+	 else if(Flag_Right==1)  Move_Z=-PI/2; //right rotation //å³è‡ªè½¬	
 	if(Car_Mode==Akm_Car)
 	{
 		//Ackermann structure car is converted to the front wheel steering Angle system target value, and kinematics analysis is pearformed
-		//°¢¿ËÂü½á¹¹Ğ¡³µ×ª»»ÎªÇ°ÂÖ×ªÏò½Ç¶È
+		//é˜¿å…‹æ›¼ç»“æ„å°è½¦è½¬æ¢ä¸ºå‰è½®è½¬å‘è§’åº¦
 		Move_Z=Move_Z*2/9; 
 	}
 	//Unit conversion, mm/s -> m/s
-  //µ¥Î»×ª»»£¬mm/s -> m/s	
+  //å•ä½è½¬æ¢ï¼Œmm/s -> m/s	
 	Move_X=Move_X/1000;       Move_Y=Move_Y/1000;         Move_Z=Move_Z;
 	//Control target value is obtained and kinematics analysis is performed
-	//µÃµ½¿ØÖÆÄ¿±êÖµ£¬½øĞĞÔË¶¯Ñ§·ÖÎö
+	//å¾—åˆ°æ§åˆ¶ç›®æ ‡å€¼ï¼Œè¿›è¡Œè¿åŠ¨å­¦åˆ†æ
 	Get_Target_Encoder(Move_X,Move_Z);
 }
 
@@ -235,9 +271,9 @@ void Get_RC(void)
 Function: Press the key to modify the car running state
 Input   : none
 Output  : none
-º¯Êı¹¦ÄÜ£º°´¼üĞŞ¸ÄĞ¡³µÔËĞĞ×´Ì¬
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šæŒ‰é”®ä¿®æ”¹å°è½¦è¿è¡ŒçŠ¶æ€
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void Key(void)
 {
@@ -246,7 +282,7 @@ void Key(void)
 	if(tmp==1)
 	{
 		Flag_Stop=!Flag_Stop;
-	}		//µ¥»÷¿ØÖÆĞ¡³µµÄÆôÍ£
+	}		//å•å‡»æ§åˆ¶å°è½¦çš„å¯åœ
 	else if(tmp==2)
 	{
 		Run_Mode++;
@@ -257,9 +293,9 @@ void Key(void)
 Function: Limiting function
 Input   : Value
 Output  : none
-º¯Êı¹¦ÄÜ£ºÏŞ·ùº¯Êı
-Èë¿Ú²ÎÊı£º·ùÖµ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šé™å¹…å‡½æ•°
+å…¥å£å‚æ•°ï¼šå¹…å€¼
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 float target_limit_float(float insert,float low,float high)
 {
@@ -283,9 +319,9 @@ int target_limit_int(int insert,int low,int high)
 Function: Limit PWM value
 Input   : Value
 Output  : none
-º¯Êı¹¦ÄÜ£ºÏŞÖÆPWMÖµ
-Èë¿Ú²ÎÊı£º·ùÖµ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šé™åˆ¶PWMå€¼
+å…¥å£å‚æ•°ï¼šå¹…å€¼
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void Limit_Pwm(int amplitude)
 {

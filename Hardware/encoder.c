@@ -3,13 +3,13 @@
 uint32_t gpio_interrup1,gpio_interrup2;
 int Get_Encoder_countA,Get_Encoder_countB;
 /*******************************************************
-º¯Êı¹¦ÄÜ£ºÍâ²¿ÖĞ¶ÏÄ£Äâ±àÂëÆ÷ĞÅºÅ
-Èë¿Úº¯Êı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šå¤–éƒ¨ä¸­æ–­æ¨¡æ‹Ÿç¼–ç å™¨ä¿¡å·
+å…¥å£å‡½æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 ***********************************************************/
 void GROUP1_IRQHandler(void)
 {
-	//»ñÈ¡ÖĞ¶ÏĞÅºÅ
+	//è·å–ä¸­æ–­ä¿¡å·
     gpio_interrup1 = DL_GPIO_getEnabledInterruptStatus(ENCODERA_PORT,ENCODERA_E1A_PIN|ENCODERA_E1B_PIN);
     gpio_interrup2 = DL_GPIO_getEnabledInterruptStatus(ENCODERB_PORT,ENCODERB_E2A_PIN|ENCODERB_E2B_PIN);
     

@@ -574,6 +574,11 @@
               <FileType>1</FileType>
               <FilePath>..\Hardware\adc.c</FilePath>
             </File>
+            <File>
+              <FileName>IR_Module.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\IR_Module.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

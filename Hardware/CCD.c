@@ -4,7 +4,7 @@ uint8_t CCD_Zhongzhi;
 uint16_t ADV[128]={0};
 unsigned int adc_value = 0;
 unsigned int voltage_value = 0;
-volatile bool gCheckADC;        //ADC²É¼¯³É¹¦±êÖ¾Î»
+volatile bool gCheckADC;        //ADCé‡‡é›†æˆåŠŸæ ‡å¿—ä½
 float CCD_KP=16,CCD_KI=7;
 float CCD_Vel=350;
 
@@ -12,23 +12,23 @@ void CCD_Mode(void)
 {
     Move_X=CCD_Vel/1000.0f;
     static float Bias,Last_Bias;
-    Bias=64-CCD_Zhongzhi;   //ÌáÈ¡Æ«²î
-    Move_Z=Bias*CCD_KP/1000.0f+(Bias-Last_Bias)*CCD_KI/1000.0f; //PD¿ØÖÆ
-    Last_Bias=Bias;   //±£´æÉÏÒ»´ÎµÄÆ«²î
+    Bias=64-CCD_Zhongzhi;   //æå–åå·®
+    Move_Z=Bias*CCD_KP/1000.0f+(Bias-Last_Bias)*CCD_KI/1000.0f; //PDæ§åˆ¶
+    Last_Bias=Bias;   //ä¿å­˜ä¸Šä¸€æ¬¡çš„åå·®
     Get_Target_Encoder(Move_X,Move_Z);
 }
-//¶ÁÈ¡ADCµÄÊı¾İ
+//è¯»å–ADCçš„æ•°æ®
 int adc_getValue(void)
 {
         unsigned int gAdcResult = 0;
 
-        //Èí¼ş´¥·¢ADC¿ªÊ¼×ª»»
+        //è½¯ä»¶è§¦å‘ADCå¼€å§‹è½¬æ¢
         DL_ADC12_startConversion(ADC12_CCD_INST);
-        //Èç¹ûµ±Ç°×´Ì¬ÎªÕıÔÚ×ª»»ÖĞÔòµÈ´ı×ª»»½áÊø
-        //»ñÈ¡Êı¾İ
+        //å¦‚æœå½“å‰çŠ¶æ€ä¸ºæ­£åœ¨è½¬æ¢ä¸­åˆ™ç­‰å¾…è½¬æ¢ç»“æŸ
+        //è·å–æ•°æ®
         gAdcResult = DL_ADC12_getMemResult(ADC12_CCD_INST, ADC12_CCD_ADCMEM_0);
 
-        //Çå³ı±êÖ¾Î»
+        //æ¸…é™¤æ ‡å¿—ä½
         gCheckADC = false;
 
         return gAdcResult;
@@ -36,9 +36,9 @@ int adc_getValue(void)
 
 
 /**************************************************************************
-º¯Êı¹¦ÄÜ£ºCCDÊı¾İ²É¼¯
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šCCDæ•°æ®é‡‡é›†
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void RD_TSL(void) 
 {
@@ -60,12 +60,12 @@ void RD_TSL(void)
 	delay_us(10); 		
 	TSL_CLK(0);  
 	delay_us(100);
-	for(int i=0;i<128;i++)    //¶ÁÈ¡128¸öÏñËØµãµçÑ¹Öµ
+	for(int i=0;i<128;i++)    //è¯»å–128ä¸ªåƒç´ ç‚¹ç”µå‹å€¼
 	{ 
 		TSL_CLK(0);
-		delay_us(100);  //µ÷½ÚÆØ¹âÊ±¼ä
+		delay_us(100);  //è°ƒèŠ‚æ›å…‰æ—¶é—´
 	
-		ADV[i]=(adc_getValue())>>4;//ÓÒÒÆ4Î»ÊÇ/4²Ù×÷£¬½«Êı¾İ·¶Î§´Ó0-4096Ñ¹Ëõµ½0-256·½±ãÊı¾İ´¦Àí
+		ADV[i]=(adc_getValue())>>4;//å³ç§»4ä½æ˜¯/4æ“ä½œï¼Œå°†æ•°æ®èŒƒå›´ä»0-4096å‹ç¼©åˆ°0-256æ–¹ä¾¿æ•°æ®å¤„ç†
 	
 		TSL_CLK(1);
 		delay_us(20);
@@ -73,32 +73,32 @@ void RD_TSL(void)
 }
 
 /**************************************************************************
-º¯Êı¹¦ÄÜ£ºÏßĞÔCCDÈ¡ÖĞÖµ
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
+å‡½æ•°åŠŸèƒ½ï¼šçº¿æ€§CCDå–ä¸­å€¼
+å…¥å£å‚æ•°ï¼šæ— 
+è¿”å›  å€¼ï¼šæ— 
 **************************************************************************/
 void Find_CCD_Median(void)
 { 
     static uint16_t i,j,Left,Right,Last_CCD_Median;
     static uint16_t value1_max,value1_min;
     static uint16_t CCD_Threshold;
-    //ãĞÖµËµÃ÷£ºCCD²É¼¯»ØÀ´µÄ128¸öÊı¾İ£¬Ã¿¸öÊı¾İµ¥¶ÀÓëãĞÖµ½øĞĞ±È½Ï£¬±ÈãĞÖµ´óÎª°×É«£¬±ÈãĞÖµĞ¡ÎªºÚÉ«
-    //¶¯Ì¬ãĞÖµËã·¨£¬¶ÁÈ¡Ã¿´Î²É¼¯Êı¾İµÄ×î´óºÍ×îĞ¡ÖµµÄÆ½¾ùÊı×÷ÎªãĞÖµ 
+    //é˜ˆå€¼è¯´æ˜ï¼šCCDé‡‡é›†å›æ¥çš„128ä¸ªæ•°æ®ï¼Œæ¯ä¸ªæ•°æ®å•ç‹¬ä¸é˜ˆå€¼è¿›è¡Œæ¯”è¾ƒï¼Œæ¯”é˜ˆå€¼å¤§ä¸ºç™½è‰²ï¼Œæ¯”é˜ˆå€¼å°ä¸ºé»‘è‰²
+    //åŠ¨æ€é˜ˆå€¼ç®—æ³•ï¼Œè¯»å–æ¯æ¬¡é‡‡é›†æ•°æ®çš„æœ€å¤§å’Œæœ€å°å€¼çš„å¹³å‡æ•°ä½œä¸ºé˜ˆå€¼ 
     value1_max=ADV[0];  
-    for(i=5;i<123;i++)   //Á½±ß¸÷È¥µô5¸öµã
+    for(i=5;i<123;i++)   //ä¸¤è¾¹å„å»æ‰5ä¸ªç‚¹
     {
         if(value1_max<=ADV[i])
         value1_max=ADV[i];
     }
-    value1_min=ADV[0];  //×îĞ¡Öµ
+    value1_min=ADV[0];  //æœ€å°å€¼
     for(i=5;i<123;i++) 
     {
         if(value1_min>=ADV[i])
         value1_min=ADV[i];
     }
-    CCD_Threshold =(value1_max+value1_min)/2;    //¼ÆËã³ö±¾´ÎÖĞÏßÌáÈ¡µÄãĞÖµ
+    CCD_Threshold =(value1_max+value1_min)/2;    //è®¡ç®—å‡ºæœ¬æ¬¡ä¸­çº¿æå–çš„é˜ˆå€¼
      
-    for(i = 5;i<118; i++)   //Ñ°ÕÒ×ó±ßÌø±äÑØ£¬Á¬ĞøÈı¸ö°×ÏñËØºóÁ¬ĞøÈı¸öºÚÏñËØÅĞ¶Ï×ó±ßÌø±äÑØ
+    for(i = 5;i<118; i++)   //å¯»æ‰¾å·¦è¾¹è·³å˜æ²¿ï¼Œè¿ç»­ä¸‰ä¸ªç™½åƒç´ åè¿ç»­ä¸‰ä¸ªé»‘åƒç´ åˆ¤æ–­å·¦è¾¹è·³å˜æ²¿
     {
         if(ADV[i]>CCD_Threshold &&ADV[i+1]>CCD_Threshold &&ADV[i+2]>CCD_Threshold &&ADV[i+3]<CCD_Threshold &&ADV[i+4]<CCD_Threshold &&ADV[i+5]<CCD_Threshold )
         {    
@@ -106,7 +106,7 @@ void Find_CCD_Median(void)
             break;    
         }
     }
-    for(j = 118;j>5; j--)//Ñ°ÕÒÓÒ±ßÌø±äÑØ£¬Á¬ĞøÈı¸öºÚÏñËØºóÁ¬ĞøÈı¸ö°×ÏñËØÅĞ¶ÏÓÒ±ßÌø±äÑØ
+    for(j = 118;j>5; j--)//å¯»æ‰¾å³è¾¹è·³å˜æ²¿ï¼Œè¿ç»­ä¸‰ä¸ªé»‘åƒç´ åè¿ç»­ä¸‰ä¸ªç™½åƒç´ åˆ¤æ–­å³è¾¹è·³å˜æ²¿
     {
         if(ADV[j]<CCD_Threshold &&ADV[j+1]<CCD_Threshold &&ADV[j+2]<CCD_Threshold &&ADV[j+3]>CCD_Threshold &&ADV[j+4]>CCD_Threshold &&ADV[j+5]>CCD_Threshold )
         {    
@@ -114,7 +114,7 @@ void Find_CCD_Median(void)
             break;    
         }
     }
-    CCD_Zhongzhi =(uint8_t)(Right+Left)/2;//¼ÆËãÖĞÏßÎ»ÖÃ
+    CCD_Zhongzhi =(uint8_t)(Right+Left)/2;//è®¡ç®—ä¸­çº¿ä½ç½®
 }
 
 
