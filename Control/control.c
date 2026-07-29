@@ -20,6 +20,8 @@ All rights reserved
 #include "control.h"
 #include "IR_Module.h"
 #include "imu/imu.h"
+#include "straight_turn_test.h"
+#include "turn_calibration.h"
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
@@ -50,6 +52,8 @@ void TIMER_0_INST_IRQHandler(void)
 			{
 				Reset_Velocity_PI();
 				IR_Differential_OneLap_Reset();
+				TurnCalibration_Reset();
+				StraightTurnTest_Reset();
 				lastRunMode = Run_Mode;
 			}
 			if (Flag_Stop)
@@ -65,6 +69,10 @@ void TIMER_0_INST_IRQHandler(void)
 				Get_RC();         //Handle the APP remote commands //处理APP遥控命令
 			}else if(Run_Mode==RUN_MODE_ONE_LAP){
 				IR_Differential_OneLap();
+			}else if(Run_Mode==RUN_MODE_TURN_CAL){
+				TurnCalibration_Run();
+			}else if(Run_Mode==RUN_MODE_STRAIGHT_TURN){
+				StraightTurnTest_Run();
 			}
 			if (Flag_Stop)
 			{
@@ -292,15 +300,58 @@ void Key(void)
         Flag_Stop = 1;
         Reset_Velocity_PI();
         IR_Differential_OneLap_Reset();
+        TurnCalibration_Reset();
+        StraightTurnTest_Reset();
 
         Menu_Selection = (u8)Run_Mode;
         Menu_Active = 1U;
         return;
     }
 
+    if (tmp == USEKEY_double_click &&
+        Run_Mode == RUN_MODE_TURN_CAL)
+    {
+        if (Flag_Stop)
+        {
+            Reset_Velocity_PI();
+            TurnCalibration_Start();
+        }
+        else
+        {
+            Reset_Velocity_PI();
+            TurnCalibration_Stop();
+        }
+        return;
+    }
+
     if (tmp == USEKEY_single_click)
     {
-        if (Run_Mode == RUN_MODE_IMU_DEBUG)
+        if (Run_Mode == RUN_MODE_TURN_CAL)
+        {
+            if (Flag_Stop)
+            {
+                TurnCalibration_IncreaseRadius();
+            }
+            else
+            {
+                Reset_Velocity_PI();
+                TurnCalibration_Stop();
+            }
+        }
+        else if (Run_Mode == RUN_MODE_STRAIGHT_TURN)
+        {
+            if (Flag_Stop)
+            {
+                Reset_Velocity_PI();
+                StraightTurnTest_Start();
+            }
+            else
+            {
+                Reset_Velocity_PI();
+                StraightTurnTest_Stop();
+            }
+        }
+        else if (Run_Mode == RUN_MODE_IMU_DEBUG)
         {
             Flag_Stop = 1;
             imu_request_yaw_zero();

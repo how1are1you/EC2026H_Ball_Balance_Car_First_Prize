@@ -1,0 +1,36 @@
+#ifndef STRAIGHT_TURN_TEST_H
+#define STRAIGHT_TURN_TEST_H
+
+#include <stdint.h>
+
+typedef enum
+{
+    STRAIGHT_TURN_IDLE = 0,
+    STRAIGHT_TURN_STRAIGHT,
+    STRAIGHT_TURN_ARC,
+    STRAIGHT_TURN_DONE,
+    STRAIGHT_TURN_FAULT
+} StraightTurnState_t;
+
+#define STRAIGHT_TURN_FAULT_NONE       (0U)
+#define STRAIGHT_TURN_FAULT_IMU        (1U)
+#define STRAIGHT_TURN_FAULT_LINE_LOST  (2U)
+#define STRAIGHT_TURN_FAULT_ARC        (3U)
+#define STRAIGHT_TURN_FAULT_TIMEOUT    (4U)
+#define STRAIGHT_TURN_FAULT_IMU_STALE  (5U)
+
+extern volatile StraightTurnState_t StraightTurnState;
+extern volatile uint8_t StraightTurnFault;
+extern volatile float StraightTurnDistanceM;
+extern volatile float StraightTurnYawDeg;
+extern volatile float StraightTurnLineError;
+extern volatile float StraightTurnHeadingErrorDeg;
+extern volatile float StraightTurnCommandSpeed;
+extern volatile uint32_t StraightTurnElapsedMs;
+
+void StraightTurnTest_Run(void);
+void StraightTurnTest_Start(void);
+void StraightTurnTest_Stop(void);
+void StraightTurnTest_Reset(void);
+
+#endif

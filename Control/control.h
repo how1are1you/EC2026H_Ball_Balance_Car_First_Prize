@@ -24,7 +24,9 @@ All rights reserved
 #define RUN_MODE_APP          0
 #define RUN_MODE_ONE_LAP      1
 #define RUN_MODE_IMU_DEBUG    2
-#define RUN_MODE_COUNT        3
+#define RUN_MODE_TURN_CAL     3
+#define RUN_MODE_STRAIGHT_TURN 4
+#define RUN_MODE_COUNT        5
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
 #define Frequency	200.0f			//每5ms读取一次编码器的值

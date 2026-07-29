@@ -20,6 +20,8 @@ All rights reserved
 #include "show.h"
 #include "IR_Module.h"
 #include "imu/imu.h"
+#include "straight_turn_test.h"
+#include "turn_calibration.h"
 /**************************************************************************
 Function: OLED display
 Input   : none
@@ -267,6 +269,131 @@ static void one_lap_oled_show(void)
     OLED_Refresh_Gram();
 }
 
+static const char *turn_calibration_state_text(
+    TurnCalibrationState_t state)
+{
+    switch (state)
+    {
+        case TURN_CALIBRATION_IDLE:
+            return "IDLE";
+        case TURN_CALIBRATION_RUNNING:
+            return "RUN";
+        case TURN_CALIBRATION_BRAKING:
+            return "BRAKE";
+        case TURN_CALIBRATION_DONE:
+            return "DONE";
+        case TURN_CALIBRATION_FAULT:
+            return "FAULT";
+        default:
+            return "?";
+    }
+}
+
+static void turn_calibration_oled_show(void)
+{
+    uint32_t radius_mm =
+        (uint32_t)(TurnCalibrationRadiusM * 1000.0f + 0.5f);
+    uint32_t distance_mm =
+        (uint32_t)(TurnCalibrationDistanceM * 1000.0f + 0.5f);
+    uint32_t speed_mm_s =
+        (uint32_t)(TurnCalibrationCommandSpeed * 1000.0f + 0.5f);
+
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(0, 0, "TURN CAL CW");
+    oled_show_text(
+        76, 0, turn_calibration_state_text(TurnCalibrationState));
+
+    oled_show_text(0, 10, "R:");
+    OLED_ShowNumber(16, 10, radius_mm, 3, 12);
+    oled_show_text(38, 10, "mm");
+
+    oled_show_text(0, 20, "Y:");
+    imu_show_signed_tenths(16, 20, TurnCalibrationYawDeg);
+    oled_show_text(64, 20, "deg");
+
+    oled_show_text(0, 30, "D:");
+    OLED_ShowNumber(16, 30, distance_mm, 4, 12);
+    oled_show_text(44, 30, "mm");
+
+    oled_show_text(0, 40, "V:");
+    OLED_ShowNumber(16, 40, speed_mm_s, 3, 12);
+    oled_show_text(38, 40, "mm/s");
+    oled_show_text(82, 40, "F:");
+    OLED_ShowNumber(98, 40, TurnCalibrationFault, 1, 12);
+
+    if (Flag_Stop)
+    {
+        oled_show_text(0, 50, "1:R+20  2:START");
+    }
+    else
+    {
+        oled_show_text(0, 50, "1:STOP");
+    }
+    OLED_Refresh_Gram();
+}
+
+static const char *straight_turn_state_text(
+    StraightTurnState_t state)
+{
+    switch (state)
+    {
+        case STRAIGHT_TURN_IDLE:
+            return "IDLE";
+        case STRAIGHT_TURN_STRAIGHT:
+            return "LINE";
+        case STRAIGHT_TURN_ARC:
+            return "ARC";
+        case STRAIGHT_TURN_DONE:
+            return "DONE";
+        case STRAIGHT_TURN_FAULT:
+            return "FAULT";
+        default:
+            return "?";
+    }
+}
+
+static void straight_turn_oled_show(void)
+{
+    uint32_t distance_mm =
+        (uint32_t)(StraightTurnDistanceM * 1000.0f + 0.5f);
+    uint32_t radius_mm =
+        (uint32_t)(TurnCalibrationRadiusM * 1000.0f + 0.5f);
+
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(0, 0, "LINE+ARC");
+    oled_show_text(
+        58, 0, straight_turn_state_text(StraightTurnState));
+
+    oled_show_text(0, 10, "S:");
+    OLED_ShowNumber(16, 10, distance_mm, 4, 12);
+    oled_show_text(44, 10, "/1500mm");
+
+    oled_show_text(0, 20, "Y:");
+    imu_show_signed_tenths(16, 20, StraightTurnYawDeg);
+    oled_show_text(64, 20, "deg");
+
+    oled_show_text(0, 30, "IR:");
+    OLED_ShowNumber(20, 30, LF04_DH1_State, 1, 12);
+    OLED_ShowNumber(28, 30, LF04_DH2_State, 1, 12);
+    OLED_ShowNumber(36, 30, LF04_DH3_State, 1, 12);
+    OLED_ShowNumber(44, 30, LF04_DH4_State, 1, 12);
+    oled_show_text(58, 30, "E:");
+    imu_show_signed_tenths(74, 30, StraightTurnLineError);
+
+    oled_show_text(0, 40, "H:");
+    imu_show_signed_tenths(
+        16, 40, StraightTurnHeadingErrorDeg);
+    oled_show_text(64, 40, "F:");
+    OLED_ShowNumber(80, 40, StraightTurnFault, 1, 12);
+
+    oled_show_text(0, 50, "R:");
+    OLED_ShowNumber(16, 50, radius_mm, 3, 12);
+    oled_show_text(38, 50, "mm");
+    oled_show_text(
+        68, 50, Flag_Stop ? "1:START" : "1:STOP");
+    OLED_Refresh_Gram();
+}
+
 static void menu_show_item(
     uint8_t y,
     uint8_t mode,
@@ -284,6 +411,8 @@ static void menu_oled_show(void)
     menu_show_item(10, RUN_MODE_APP, "APP CONTROL");
     menu_show_item(20, RUN_MODE_ONE_LAP, "ONE LAP");
     menu_show_item(30, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
+    menu_show_item(40, RUN_MODE_TURN_CAL, "TURN CAL");
+    menu_show_item(50, RUN_MODE_STRAIGHT_TURN, "LINE+ARC");
 
     OLED_Refresh_Gram();
 }
@@ -311,6 +440,16 @@ void oled_show(void)
     if (Run_Mode == RUN_MODE_IMU_DEBUG)
     {
         imu_debug_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_TURN_CAL)
+    {
+        turn_calibration_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_STRAIGHT_TURN)
+    {
+        straight_turn_oled_show();
         return;
     }
 
@@ -388,7 +527,9 @@ void APP_Show(void)
 
     if (Menu_Active ||
         Run_Mode == RUN_MODE_ONE_LAP ||
-        Run_Mode == RUN_MODE_IMU_DEBUG)
+        Run_Mode == RUN_MODE_IMU_DEBUG ||
+        Run_Mode == RUN_MODE_TURN_CAL ||
+        Run_Mode == RUN_MODE_STRAIGHT_TURN)
     {
         return;
     }

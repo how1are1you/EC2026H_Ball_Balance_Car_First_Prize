@@ -624,6 +624,16 @@
               <FileType>1</FileType>
               <FilePath>..\Control\uart_callback.c</FilePath>
             </File>
+            <File>
+              <FileName>turn_calibration.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\turn_calibration.c</FilePath>
+            </File>
+            <File>
+              <FileName>straight_turn_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\straight_turn_test.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

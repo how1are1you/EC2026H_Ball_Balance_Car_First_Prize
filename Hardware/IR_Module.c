@@ -81,6 +81,47 @@ static uint8_t LF04_IsBlack(uint32_t pinState)
     return (LF04_BlackActiveHigh != 0U) ? isHigh : (uint8_t)(isHigh == 0U);
 }
 
+uint8_t IR_ReadLineErrorFour(float *error)
+{
+    float weighted_sum;
+    uint8_t active_count;
+
+    LF04_DH1_State = LF04_IsBlack(
+        DL_GPIO_readPins(LF04_DH1_PORT, LF04_DH1_PIN));
+    LF04_DH2_State = LF04_IsBlack(
+        DL_GPIO_readPins(LF04_DH2_PORT, LF04_DH2_PIN));
+    LF04_DH3_State = LF04_IsBlack(
+        DL_GPIO_readPins(LF04_DH3_PORT, LF04_DH3_PIN));
+    LF04_DH4_State = LF04_IsBlack(
+        DL_GPIO_readPins(LF04_DH4_PORT, LF04_DH4_PIN));
+    LF04_State =
+        (uint8_t)((LF04_DH1_State << 3U) |
+                  (LF04_DH2_State << 2U) |
+                  (LF04_DH3_State << 1U) |
+                  LF04_DH4_State);
+
+    active_count =
+        LF04_DH1_State + LF04_DH2_State +
+        LF04_DH3_State + LF04_DH4_State;
+    if (active_count == 0U)
+    {
+        return 0U;
+    }
+
+    /*
+     * Keep the same steering sign convention as the existing two-channel
+     * controller: DH1/DH2 are on one side and DH3/DH4 on the other.
+     */
+    weighted_sum =
+        2.0f * (float)LF04_DH1_State +
+        1.0f * (float)LF04_DH2_State -
+        1.0f * (float)LF04_DH3_State -
+        2.0f * (float)LF04_DH4_State;
+    *error = LF04_SteeringSign *
+             weighted_sum / (float)active_count;
+    return 1U;
+}
+
 static float LF04_LimitFloat(float value, float minimum, float maximum)
 {
     if (value < minimum)

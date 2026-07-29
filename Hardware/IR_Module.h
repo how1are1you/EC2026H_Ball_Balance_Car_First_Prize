@@ -60,5 +60,6 @@ extern volatile uint32_t LF04_LapElapsedMs;
 
 void IR_Differential_OneLap(void);
 void IR_Differential_OneLap_Reset(void);
+uint8_t IR_ReadLineErrorFour(float *error);
 
 #endif
