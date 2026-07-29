@@ -22,7 +22,7 @@ All rights reserved
 #include "board.h"
 
 #define RUN_MODE_APP          0
-#define RUN_MODE_LINE_TRACK   1
+#define RUN_MODE_ONE_LAP      1
 #define RUN_MODE_IMU_DEBUG    2
 #define RUN_MODE_COUNT        3
 

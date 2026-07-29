@@ -9,19 +9,56 @@ extern uint8_t LF04_DH3_State;
 extern uint8_t LF04_DH4_State;
 extern uint8_t LF04_State;
 
-/* Set to 0 if the LF04 module reports a black line with a logic-low output. */
+/*
+ * The lap controller only reads DH2 (left-middle) and DH3 (right-middle).
+ * Set this to 0 only if a black line is reported as a logic-low input.
+ */
 extern uint8_t LF04_BlackActiveHigh;
 
-/* Initial tuning parameters for the Ackermann line-tracking mode. */
+typedef enum
+{
+    LF04_LAP_IDLE = 0,
+    LF04_LAP_STRAIGHT_1,
+    LF04_LAP_CURVE_1,
+    LF04_LAP_STRAIGHT_2,
+    LF04_LAP_CURVE_2,
+    LF04_LAP_BRAKING,
+    LF04_LAP_SETTLING,
+    LF04_LAP_DONE,
+    LF04_LAP_FAULT
+} LF04_LapState_t;
+
+#define LF04_LAP_FAULT_NONE          (0U)
+#define LF04_LAP_FAULT_LINE_LOST     (1U)
+#define LF04_LAP_FAULT_TIMEOUT       (2U)
+#define LF04_LAP_FAULT_PROGRESS      (3U)
+#define LF04_LAP_FAULT_IMU_STALE     (4U)
+
+/* Initial on-board tuning parameters. Units are SI unless noted. */
 extern float LF04_BaseSpeed;
 extern float LF04_LostLineSpeed;
-extern float LF04_Turn90Angle;
-extern float LF04_TurnMaxAngle;
-extern float LF04_TurnMinAngle;
 extern float LF04_SteeringSign;
 extern float LF04_Acceleration;
+extern float LF04_Deceleration;
+extern float LF04_SteeringKp;
+extern float LF04_SteeringKi;
+extern float LF04_SteeringKd;
+extern float LF04_MaxFeedbackOmega;
+extern float LF04_CurveFeedforwardGain;
+extern float LF04_SensorToDriveAxle;
+extern float LF04_LapTargetDistance;
+extern float LF04_FinishYawMinimum;
 
-void IR_Ackermann_LineTrack(void);
-void IR_Ackermann_LineTrack_Reset(void);
+extern volatile LF04_LapState_t LF04_LapState;
+extern volatile uint8_t LF04_LapFault;
+extern volatile uint8_t LF04_ImuUsed;
+extern volatile float LF04_LapDistanceM;
+extern volatile float LF04_LapYawDeg;
+extern volatile float LF04_SteeringError;
+extern volatile float LF04_CommandSpeed;
+extern volatile uint32_t LF04_LapElapsedMs;
+
+void IR_Differential_OneLap(void);
+void IR_Differential_OneLap_Reset(void);
 
 #endif

@@ -2,7 +2,7 @@
 #include "led.h"
 #include "imu/imu.h"
 uint32_t gpio_interrup1,gpio_interrup2;
-int Get_Encoder_countA,Get_Encoder_countB;
+volatile int Get_Encoder_countA,Get_Encoder_countB;
 /*******************************************************
 函数功能：外部中断模拟编码器信号
 入口函数：无

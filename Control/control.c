@@ -49,21 +49,28 @@ void TIMER_0_INST_IRQHandler(void)
 			if (Run_Mode != lastRunMode)
 			{
 				Reset_Velocity_PI();
-				IR_Ackermann_LineTrack_Reset();
+				IR_Differential_OneLap_Reset();
 				lastRunMode = Run_Mode;
 			}
 			if (Flag_Stop)
 			{
 				Reset_Velocity_PI();
-				IR_Ackermann_LineTrack_Reset();
+				MotorA.Target_Encoder = 0.0f;
+				MotorB.Target_Encoder = 0.0f;
 				Set_PWM(0,0,0);
 				return;
 			}
 			if(Run_Mode==RUN_MODE_APP)
 			{
 				Get_RC();         //Handle the APP remote commands //处理APP遥控命令
-			}else if(Run_Mode==RUN_MODE_LINE_TRACK){
-				IR_Ackermann_LineTrack();
+			}else if(Run_Mode==RUN_MODE_ONE_LAP){
+				IR_Differential_OneLap();
+			}
+			if (Flag_Stop)
+			{
+				Reset_Velocity_PI();
+				Set_PWM(0,0,0);
+				return;
 			}
 //			//计算左右电机对应的PWM
 			MotorA.Motor_Pwm = Incremental_PI_Left(MotorA.Current_Encoder,MotorA.Target_Encoder);	
@@ -98,41 +105,16 @@ void Get_Velocity_From_Encoder(int Encoder1,int Encoder2)
 		Encoder_B_pr * Frequency / ENCODER_RIGHT_COUNTS_PER_METER;
 	
 }
-//运动学逆解，由x和y的速度得到编码器的速度,Vx是m/s,Vz单位是度/s(角度制)
+//差速运动学逆解：Vx单位m/s，Vz单位rad/s，正值为左转
 void Get_Target_Encoder(float Vx,float Vz)
 {
 	float amplitude=3.5f; //Wheel target speed limit //车轮目标速度限幅
-	float R, AngleR;
-		
-	// For Ackerman small car, Vz represents the front wheel steering Angle
-	//对于阿克曼小车Vz代表右前轮转向角度
-	AngleR=Vz;
-	
-	// Front wheel steering Angle limit (front wheel steering Angle controlled by steering engine), unit: rad
-	//前轮转向角度限幅(舵机控制前轮转向角度)，单位：rad
-	AngleR=target_limit_float(AngleR,-0.52f,0.48f); //限幅在左右30°
-	
-	//计算转弯半径
-	R=Axle_spacing/tan(AngleR)-0.5f*Wheel_spacing;
-	
-	//Inverse kinematics //运动学逆解
-	if(AngleR!=0)
-	{
-		
-		MotorA.Target_Encoder = Vx*(R-0.5f*Wheel_spacing)/R;
-		MotorB.Target_Encoder = Vx*(R+0.5f*Wheel_spacing)/R;	
-		//舵机与角度的关系公式，由采集数据组后3次拟合得出
-		//粗略拟合,8组数据
-		//Servo = 1.49e+03f + 1.01e+03f*AngleR + (-3.73e+02f)*pow(AngleR,2) + 4.21e+02f*pow(AngleR,3) + 10 ; //10为偏差值
-		//精细拟合,14组数据
-		Servo = 1.47e+03f + 8.90e+02f*AngleR + (-2.28e+01f)*pow(AngleR,2) + 4.44e+02f*pow(AngleR,3) ;			
-	}
-	else 
-	{
-		MotorA.Target_Encoder = Vx;
-		MotorB.Target_Encoder = Vx;
-		Servo = Servo_Init;
-	}
+
+	MotorA.Target_Encoder =
+		Vx - 0.5f * DRIVE_WHEEL_SPACING * Vz;
+	MotorB.Target_Encoder =
+		Vx + 0.5f * DRIVE_WHEEL_SPACING * Vz;
+	Servo = Servo_Init;
 	MotorA.Target_Encoder=target_limit_float(MotorA.Target_Encoder,-amplitude,amplitude); 
 	MotorB.Target_Encoder=target_limit_float(MotorB.Target_Encoder,-amplitude,amplitude); 
 }
@@ -309,7 +291,7 @@ void Key(void)
     {
         Flag_Stop = 1;
         Reset_Velocity_PI();
-        IR_Ackermann_LineTrack_Reset();
+        IR_Differential_OneLap_Reset();
 
         Menu_Selection = (u8)Run_Mode;
         Menu_Active = 1U;
@@ -325,6 +307,10 @@ void Key(void)
         }
         else
         {
+            if (Flag_Stop && Run_Mode == RUN_MODE_ONE_LAP)
+            {
+                IR_Differential_OneLap_Reset();
+            }
             Flag_Stop = !Flag_Stop;
         }
     }

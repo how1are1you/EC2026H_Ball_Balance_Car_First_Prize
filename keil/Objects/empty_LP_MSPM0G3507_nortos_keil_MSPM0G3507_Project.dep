@@ -1,6 +1,6 @@
 Dependencies for Project 'empty_LP_MSPM0G3507_nortos_keil', Target 'MSPM0G3507_Project': (DO NOT MODIFY !)
 CompilerVersion: 6240000::V6.24::ARMCLANG
-F (../empty.syscfg)(0x6A69A7B0)()
+F (../empty.syscfg)(0x6A69BDF9)()
 F (startup_mspm0g350x_uvision.s)(0x68410DA8)(--target=arm-arm-none-eabi -mcpu=cortex-m0plus -masm=auto  -Wa,armasm,--diag_suppress=A1950W -c-gdwarf-4 -Wa,armasm,--pd,"__MICROLIB SETA 1"-Wa,armasm,--pd,"__UVISION_VERSION SETA 543" -Wa,armasm,--pd,"__MSPM0G3507__ SETA 1"-o ./objects/startup_mspm0g350x_uvision.o)
 F (../ti_msp_dl_config.h)(0x6A69A10C)()
 F (../ti_msp_dl_config.c)(0x6A69A10C)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/ti_msp_dl_config.o -MMD)
@@ -77,7 +77,7 @@ I (..\source\ti\driverlib\dl_vref.h)(0x66631CE6)
 I (..\source\ti\driverlib\dl_wwdt.h)(0x66631CE6)
 I (..\source\ti\driverlib\m0p\dl_interrupt.h)(0x66631CE6)
 I (..\source\ti\driverlib\m0p\dl_systick.h)(0x66631CE6)
-F (..\empty.c)(0x6A69B641)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/empty.o -MMD)
+F (..\empty.c)(0x6A69BB4E)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/empty.o -MMD)
 I (..\Hardware\board.h)(0x6A696CB1)
 I (..\..\WHEELTEC_C07A_R3XAkm\ti_msp_dl_config.h)(0x6A69A10C)
 I (..\source\ti\devices\msp\msp.h)(0x66631CE6)
@@ -156,9 +156,9 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
@@ -243,9 +243,9 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
@@ -1097,9 +1097,9 @@ I (..\Hardware\board.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
@@ -1184,9 +1184,9 @@ I (..\Hardware\board.h)(0x6A696CB1)
 I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
@@ -1345,15 +1345,15 @@ I (..\Hardware\board.h)(0x6A696CB1)
 I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
-F (..\Hardware\encoder.c)(0x6A69A509)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/encoder.o -MMD)
-I (..\Hardware\encoder.h)(0x68465934)
+F (..\Hardware\encoder.c)(0x6A69BADB)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/encoder.o -MMD)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\..\WHEELTEC_C07A_R3XAkm\ti_msp_dl_config.h)(0x6A69A10C)
 I (..\source\ti\devices\msp\msp.h)(0x66631CE6)
 I (..\source\ti\devices\DeviceFamily.h)(0x66631CE6)
@@ -1433,7 +1433,7 @@ I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
@@ -1519,15 +1519,15 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
-F (..\Hardware\IR_Module.c)(0x6A697306)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/ir_module.o -MMD)
-I (..\Hardware\IR_Module.h)(0x6A697306)
-I (..\Control\control.h)(0x6A69B092)
+F (..\Hardware\IR_Module.c)(0x6A69C526)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/ir_module.o -MMD)
+I (..\Hardware\IR_Module.h)(0x6A69C526)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Hardware\board.h)(0x6A696CB1)
 I (..\..\WHEELTEC_C07A_R3XAkm\ti_msp_dl_config.h)(0x6A69A10C)
 I (..\source\ti\devices\msp\msp.h)(0x66631CE6)
@@ -1606,12 +1606,13 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
+I (..\Hardware\imu\imu.h)(0x6A69A4AC)
 F (..\Hardware\imu\imu.c)(0x6A69B313)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/imu.o -MMD)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
 I (..\Hardware\imu\imu_bus.h)(0x6A69A422)
@@ -1777,8 +1778,8 @@ I (..\Hardware\imu\inv_mpu.h)(0x6A69B313)
 I (..\Hardware\imu\inv_mpu_dmp_motion_driver.h)(0x68463120)
 I (..\Hardware\imu\dmpKey.h)(0x68463120)
 I (..\Hardware\imu\dmpmap.h)(0x68463120)
-F (..\Control\control.c)(0x6A69B092)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/control.o -MMD)
-I (..\Control\control.h)(0x6A69B092)
+F (..\Control\control.c)(0x6A69BDF9)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/control.o -MMD)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Hardware\board.h)(0x6A696CB1)
 I (..\..\WHEELTEC_C07A_R3XAkm\ti_msp_dl_config.h)(0x6A69A10C)
 I (..\source\ti\devices\msp\msp.h)(0x66631CE6)
@@ -1857,15 +1858,15 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
-I (..\Hardware\IR_Module.h)(0x6A697306)
+I (..\Hardware\IR_Module.h)(0x6A69C526)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
-F (..\Control\show.c)(0x6A69B641)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/show.o -MMD)
+F (..\Control\show.c)(0x6A69BDF9)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/show.o -MMD)
 I (..\Control\show.h)(0x6A69B641)
 I (..\Hardware\board.h)(0x6A696CB1)
 I (..\..\WHEELTEC_C07A_R3XAkm\ti_msp_dl_config.h)(0x6A69A10C)
@@ -1945,12 +1946,13 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Hardware\encoder.h)(0x6A69BADB)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
+I (..\Hardware\IR_Module.h)(0x6A69C526)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
 F (..\Control\DataScope_DP.C)(0x6A696CB1)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/datascope_dp.o -MMD)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
@@ -2032,9 +2034,9 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
@@ -2117,9 +2119,9 @@ I (..\Hardware\oled.h)(0x6A696CB1)
 I (..\Hardware\led.h)(0x669E0504)
 I (..\Hardware\key.h)(0x6847E75C)
 I (..\Hardware\motor.h)(0x68818C8C)
-I (..\Hardware\encoder.h)(0x68465934)
+I (..\Hardware\encoder.h)(0x6A69BADB)
 I (..\Control\show.h)(0x6A69B641)
-I (..\Control\control.h)(0x6A69B092)
+I (..\Control\control.h)(0x6A69BADB)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6858EEA2)
 I (..\Hardware\CCD.h)(0x6A696CB1)

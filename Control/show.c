@@ -18,6 +18,7 @@ Update：2021-04-29
 All rights reserved
 ***********************************************/
 #include "show.h"
+#include "IR_Module.h"
 #include "imu/imu.h"
 /**************************************************************************
 Function: OLED display
@@ -201,6 +202,71 @@ void imu_startup_oled_show(uint8_t seconds_remaining)
     OLED_Refresh_Gram();
 }
 
+static const char *one_lap_state_text(LF04_LapState_t state)
+{
+    switch (state)
+    {
+        case LF04_LAP_IDLE:
+            return "IDLE";
+        case LF04_LAP_STRAIGHT_1:
+            return "S1";
+        case LF04_LAP_CURVE_1:
+            return "C1";
+        case LF04_LAP_STRAIGHT_2:
+            return "S2";
+        case LF04_LAP_CURVE_2:
+            return "C2";
+        case LF04_LAP_BRAKING:
+            return "BRAKE";
+        case LF04_LAP_SETTLING:
+            return "SET";
+        case LF04_LAP_DONE:
+            return "DONE";
+        case LF04_LAP_FAULT:
+            return "FAULT";
+        default:
+            return "?";
+    }
+}
+
+static void one_lap_oled_show(void)
+{
+    uint32_t distance_mm =
+        (uint32_t)(LF04_LapDistanceM * 1000.0f + 0.5f);
+    uint32_t speed_mm_s =
+        (uint32_t)(LF04_CommandSpeed * 1000.0f + 0.5f);
+
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(0, 0, "ONE LAP");
+    oled_show_text(58, 0, one_lap_state_text(LF04_LapState));
+
+    oled_show_text(0, 10, "S:");
+    OLED_ShowNumber(16, 10, distance_mm, 4, 12);
+    oled_show_text(44, 10, "mm");
+
+    oled_show_text(0, 20, "Y:");
+    imu_show_signed_tenths(16, 20, LF04_LapYawDeg);
+    oled_show_text(64, 20, "deg");
+
+    oled_show_text(0, 30, "IR:");
+    OLED_ShowNumber(20, 30, LF04_DH2_State, 1, 12);
+    OLED_ShowNumber(28, 30, LF04_DH3_State, 1, 12);
+    oled_show_text(46, 30, "E:");
+    imu_show_signed_tenths(62, 30, LF04_SteeringError);
+
+    oled_show_text(0, 40, "V:");
+    OLED_ShowNumber(16, 40, speed_mm_s, 3, 12);
+    oled_show_text(38, 40, "mm/s");
+    oled_show_text(80, 40, (LF04_ImuUsed != 0U) ? "IMU" : "ENC");
+
+    oled_show_text(0, 50, "T:");
+    OLED_ShowNumber(16, 50, LF04_LapElapsedMs / 1000U, 2, 12);
+    oled_show_text(32, 50, "s");
+    oled_show_text(52, 50, "F:");
+    OLED_ShowNumber(68, 50, LF04_LapFault, 1, 12);
+    OLED_Refresh_Gram();
+}
+
 static void menu_show_item(
     uint8_t y,
     uint8_t mode,
@@ -216,7 +282,7 @@ static void menu_oled_show(void)
 
     oled_show_text(0, 0, "SELECT MODE");
     menu_show_item(10, RUN_MODE_APP, "APP CONTROL");
-    menu_show_item(20, RUN_MODE_LINE_TRACK, "LINE TRACK");
+    menu_show_item(20, RUN_MODE_ONE_LAP, "ONE LAP");
     menu_show_item(30, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
 
     OLED_Refresh_Gram();
@@ -224,9 +290,22 @@ static void menu_oled_show(void)
 
 void oled_show(void)
 {
+    static unsigned long last_refresh_ms;
+
+    if ((unsigned long)(tick_ms - last_refresh_ms) < 50UL)
+    {
+        return;
+    }
+    last_refresh_ms = tick_ms;
+
     if (Menu_Active)
     {
         menu_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_ONE_LAP)
+    {
+        one_lap_oled_show();
         return;
     }
     if (Run_Mode == RUN_MODE_IMU_DEBUG)
@@ -307,7 +386,9 @@ void APP_Show(void)
   static u8 flag;
     int Encoder_Left_Show,Encoder_Right_Show,Voltage_Show;
 
-    if (Menu_Active || Run_Mode == RUN_MODE_IMU_DEBUG)
+    if (Menu_Active ||
+        Run_Mode == RUN_MODE_ONE_LAP ||
+        Run_Mode == RUN_MODE_IMU_DEBUG)
     {
         return;
     }
