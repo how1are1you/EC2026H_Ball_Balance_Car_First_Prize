@@ -16,12 +16,14 @@ output live under `keil/`.
 
 Open `keil/empty_LP_MSPM0G3507_nortos_keil.uvprojx` in Keil uVision, select the
 `MSPM0G3507_Project` target, then use **Project > Build Target**. This produces
-the firmware image under `keil/Objects/` (for example, the `.axf` file). If
-uVision is on `PATH`, the equivalent command is:
+the firmware image under `keil/Objects/` (for example, the `.axf` file). The
+following ARMCLANG/uVision installation has been verified in this workspace:
 
 ```powershell
-UV4.exe -b keil\empty_LP_MSPM0G3507_nortos_keil.uvprojx -t MSPM0G3507_Project
+& 'D:\Infineon\Keli\Keil_v5\UV4\UV4.exe' -b keil\empty_LP_MSPM0G3507_nortos_keil.uvprojx -t MSPM0G3507_Project
 ```
+
+Use `-r` instead of `-b` for a clean, forced rebuild.
 
 After changing `empty.syscfg`, set `SYSCFG_PATH` in `tools/keil/syscfg.bat` to
 the installed SysConfig CLI and regenerate `ti_msp_dl_config.c/.h` before

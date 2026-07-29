@@ -579,6 +579,26 @@
               <FileType>1</FileType>
               <FilePath>..\Hardware\IR_Module.c</FilePath>
             </File>
+            <File>
+              <FileName>imu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\imu\imu.c</FilePath>
+            </File>
+            <File>
+              <FileName>imu_bus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\imu\imu_bus.c</FilePath>
+            </File>
+            <File>
+              <FileName>inv_mpu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\imu\inv_mpu.c</FilePath>
+            </File>
+            <File>
+              <FileName>inv_mpu_dmp_motion_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\imu\inv_mpu_dmp_motion_driver.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

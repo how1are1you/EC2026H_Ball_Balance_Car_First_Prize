@@ -30,6 +30,10 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "board.h"
+#include "imu/imu.h"
+
+#define IMU_STARTUP_STABILIZE_MS (8000UL)
+
 u8 Car_Mode=Akm_Car;
 int Motor_Left,Motor_Right;                 //电机PWM变量 应是Motor的
 u8 PID_Send;            //延时和调参相关变量
@@ -38,17 +42,44 @@ float Velocity_Left,Velocity_Right; //车轮速度(mm/s)
 u16 test_num,show_cnt;
 float Voltage=0;
 int Servo_Init=1500;
+
+static void imu_wait_for_stabilization(void)
+{
+    unsigned long start_ms = tick_ms;
+    uint8_t displayed_seconds = 0U;
+
+    while ((unsigned long)(tick_ms - start_ms) <
+           IMU_STARTUP_STABILIZE_MS)
+    {
+        unsigned long elapsed_ms =
+            (unsigned long)(tick_ms - start_ms);
+        uint8_t remaining_seconds = (uint8_t)
+            ((IMU_STARTUP_STABILIZE_MS - elapsed_ms + 999UL) / 1000UL);
+
+        if (remaining_seconds != displayed_seconds)
+        {
+            displayed_seconds = remaining_seconds;
+            imu_startup_oled_show(remaining_seconds);
+        }
+
+        imu_service();
+        delay_ms(1U);
+    }
+}
+
 int main(void)
 {
+    int imu_result;
+
     // 系统初始化
     SYSCFG_DL_init();  // 初始化系统配置
     // 清除所有外设的中断挂起状态
-    NVIC_ClearPendingIRQ(ENCODERA_INT_IRQN);    // 编码器A中断
+    NVIC_ClearPendingIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN);    // 编码器A与MPU6050中断
     NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);    // 编码器B中断
     NVIC_ClearPendingIRQ(UART_0_INST_INT_IRQN);  // UART0串口中断
     NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);  // UART1串口中断
     // 使能各外设的中断
-    NVIC_EnableIRQ(ENCODERA_INT_IRQN);    // 开启编码器A中断
+    NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN);    // 开启编码器A与MPU6050中断
     NVIC_EnableIRQ(ENCODERB_INT_IRQN);    // 开启编码器B中断
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN); // 开启UART0中断
     NVIC_EnableIRQ(UART_1_INST_INT_IRQN); // 开启UART1中断
@@ -57,17 +88,20 @@ int main(void)
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);        // 开启定时器0中断
     NVIC_EnableIRQ(ADC12_VOLTAGE_INST_INT_IRQN);
     OLED_Init();  // 初始化OLED显示屏
+    imu_result = imu_init();
+    if (imu_result == 0)
+    {
+        imu_wait_for_stabilization();
+    }
 	//舵机初始化回归中位
 	DL_Timer_setCaptureCompareValue(PWM_1_INST,Servo_Init,GPIO_PWM_1_C0_IDX);
     // 主循环
     while (1) 
     {
+        imu_service();
 		Voltage = Get_battery_volt();//采样小车当前电压
         BTBufferHandler();    // 处理蓝牙数据缓冲区
         oled_show();         //  OLED显示更新
         APP_Show();          //  APP显示处理
     }
 }
-
-
-

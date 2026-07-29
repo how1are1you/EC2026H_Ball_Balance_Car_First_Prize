@@ -18,6 +18,7 @@ Update：2021-04-29
 All rights reserved
 ***********************************************/
 #include "show.h"
+#include "imu/imu.h"
 /**************************************************************************
 Function: OLED display
 Input   : none
@@ -27,8 +28,213 @@ Output  : none
 返回  值：无
 **************************************************************************/
 extern int Servo;
+
+static void oled_show_text(
+    uint8_t x,
+    uint8_t y,
+    const char *text)
+{
+    OLED_ShowString(x, y, (const uint8_t *)text);
+}
+
+static uint8_t imu_unsigned_digits(uint32_t value)
+{
+    uint8_t digits = 1U;
+
+    while (value >= 10U)
+    {
+        value /= 10U;
+        digits++;
+    }
+    return digits;
+}
+
+static void imu_show_signed_tenths(
+    uint8_t x,
+    uint8_t y,
+    float value)
+{
+    int32_t scaled;
+    uint32_t magnitude;
+    uint32_t whole;
+    uint8_t digits;
+    uint8_t number_x;
+    uint8_t decimal_x;
+
+    if (value > 99999.9f)
+    {
+        value = 99999.9f;
+    }
+    else if (value < -99999.9f)
+    {
+        value = -99999.9f;
+    }
+
+    scaled = (int32_t)(value * 10.0f +
+                       ((value >= 0.0f) ? 0.5f : -0.5f));
+
+    if (scaled < 0)
+    {
+        OLED_ShowChar(x, y, '-', 12, 1);
+        magnitude = (uint32_t)(-scaled);
+    }
+    else
+    {
+        OLED_ShowChar(x, y, '+', 12, 1);
+        magnitude = (uint32_t)scaled;
+    }
+
+    whole = magnitude / 10U;
+    digits = imu_unsigned_digits(whole);
+    number_x = (uint8_t)(x + 6U);
+    decimal_x = (uint8_t)(number_x + digits * 6U);
+    OLED_ShowNumber(number_x, y, whole, digits, 12);
+    OLED_ShowChar(decimal_x, y, '.', 12, 1);
+    OLED_ShowChar((uint8_t)(decimal_x + 6U), y,
+                  (uint8_t)('0' + magnitude % 10U), 12, 1);
+}
+
+static uint8_t imu_show_signed_millidegrees(
+    uint8_t x,
+    uint8_t y,
+    float value)
+{
+    int32_t scaled;
+    uint32_t magnitude;
+    uint32_t whole;
+    uint32_t fraction;
+    uint8_t digits;
+    uint8_t number_x;
+    uint8_t decimal_x;
+
+    if (value > 99999.999f)
+    {
+        value = 99999.999f;
+    }
+    else if (value < -99999.999f)
+    {
+        value = -99999.999f;
+    }
+
+    scaled = (int32_t)(value * 1000.0f +
+                       ((value >= 0.0f) ? 0.5f : -0.5f));
+    if (scaled < 0)
+    {
+        OLED_ShowChar(x, y, '-', 12, 1);
+        magnitude = (uint32_t)(-scaled);
+    }
+    else
+    {
+        OLED_ShowChar(x, y, '+', 12, 1);
+        magnitude = (uint32_t)scaled;
+    }
+
+    whole = magnitude / 1000U;
+    fraction = magnitude % 1000U;
+    digits = imu_unsigned_digits(whole);
+    number_x = (uint8_t)(x + 6U);
+    decimal_x = (uint8_t)(number_x + digits * 6U);
+    OLED_ShowNumber(number_x, y, whole, digits, 12);
+    OLED_ShowChar(decimal_x, y, '.', 12, 1);
+    OLED_ShowChar((uint8_t)(decimal_x + 6U), y,
+                  (uint8_t)('0' + fraction / 100U), 12, 1);
+    OLED_ShowChar((uint8_t)(decimal_x + 12U), y,
+                  (uint8_t)('0' + (fraction / 10U) % 10U), 12, 1);
+    OLED_ShowChar((uint8_t)(decimal_x + 18U), y,
+                  (uint8_t)('0' + fraction % 10U), 12, 1);
+    return (uint8_t)(decimal_x + 24U);
+}
+
+static void imu_debug_oled_show(void)
+{
+    imu_sample_t sample;
+    const char *status_text;
+    uint8_t yaw_end_x;
+
+    imu_get_snapshot(&sample);
+    switch (sample.status)
+    {
+        case IMU_STATUS_INITIALIZING:
+            status_text = "INIT";
+            break;
+        case IMU_STATUS_READY:
+            status_text = "READY";
+            break;
+        case IMU_STATUS_DEVICE_NOT_FOUND:
+            status_text = "NO DEV";
+            break;
+        case IMU_STATUS_DMP_ERROR:
+            status_text = "DMP ERR";
+            break;
+        case IMU_STATUS_FIFO_ERROR:
+            status_text = "FIFO ERR";
+            break;
+        default:
+            status_text = "OFF";
+            break;
+    }
+
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(0, 0, "IMU:");
+    oled_show_text(26, 0, status_text);
+    oled_show_text(82, 0, "ID:");
+    OLED_ShowNumber(100, 0, sample.who_am_i, 3, 12);
+
+    oled_show_text(0, 10, "Y:");
+    yaw_end_x =
+        imu_show_signed_millidegrees(16, 10, sample.yaw_continuous_deg);
+    oled_show_text((uint8_t)(yaw_end_x + 4U), 10, "deg");
+
+    oled_show_text(0, 20, "GZ:");
+    imu_show_signed_tenths(24, 20, sample.gyro_z_dps);
+    OLED_Refresh_Gram();
+}
+
+void imu_startup_oled_show(uint8_t seconds_remaining)
+{
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(12, 4, "IMU CALIBRATE");
+    oled_show_text(8, 22, "KEEP CAR STILL");
+    oled_show_text(24, 40, "WAIT:");
+    OLED_ShowNumber(68, 40, seconds_remaining, 1, 12);
+    oled_show_text(80, 40, "SEC");
+    OLED_Refresh_Gram();
+}
+
+static void menu_show_item(
+    uint8_t y,
+    uint8_t mode,
+    const char *text)
+{
+    OLED_ShowChar(0, y, (Menu_Selection == mode) ? '>' : ' ', 12, 1);
+    oled_show_text(6, y, text);
+}
+
+static void menu_oled_show(void)
+{
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+
+    oled_show_text(0, 0, "SELECT MODE");
+    menu_show_item(10, RUN_MODE_APP, "APP CONTROL");
+    menu_show_item(20, RUN_MODE_LINE_TRACK, "LINE TRACK");
+    menu_show_item(30, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
+
+    OLED_Refresh_Gram();
+}
+
 void oled_show(void)
 {
+    if (Menu_Active)
+    {
+        menu_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_IMU_DEBUG)
+    {
+        imu_debug_oled_show();
+        return;
+    }
+
      memset(OLED_GRAM,0, 128*8*sizeof(u8)); //GRAM清零但不立即刷新，防止花屏
         //=============第一行显示小车模式=======================//
 	
@@ -100,6 +306,12 @@ void APP_Show(void)
 {
   static u8 flag;
     int Encoder_Left_Show,Encoder_Right_Show,Voltage_Show;
+
+    if (Menu_Active || Run_Mode == RUN_MODE_IMU_DEBUG)
+    {
+        return;
+    }
+
     Voltage_Show=(Voltage-1000)*2/3;        if(Voltage_Show<0)Voltage_Show=0;if(Voltage_Show>100) Voltage_Show=100;   //对电压数据进行处理
     Encoder_Right_Show=Velocity_Right*1.1; if(Encoder_Right_Show<0) Encoder_Right_Show=-Encoder_Right_Show;           //对编码器数据就行数据处理便于图形化
     Encoder_Left_Show=Velocity_Left*1.1;  if(Encoder_Left_Show<0) Encoder_Left_Show=-Encoder_Left_Show;

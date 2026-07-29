@@ -117,6 +117,22 @@ extern "C" {
 
 
 
+
+/* Defines for I2C_0 */
+#define I2C_0_INST                                                          I2C0
+#define I2C_0_INST_IRQHandler                                    I2C0_IRQHandler
+#define I2C_0_INST_INT_IRQN                                        I2C0_INT_IRQn
+#define I2C_0_BUS_SPEED_HZ                                                400000
+#define GPIO_I2C_0_SDA_PORT                                                GPIOA
+#define GPIO_I2C_0_SDA_PIN                                         DL_GPIO_PIN_0
+#define GPIO_I2C_0_IOMUX_SDA                                      (IOMUX_PINCM1)
+#define GPIO_I2C_0_IOMUX_SDA_FUNC                       IOMUX_PINCM1_PF_I2C0_SDA
+#define GPIO_I2C_0_SCL_PORT                                                GPIOA
+#define GPIO_I2C_0_SCL_PIN                                         DL_GPIO_PIN_1
+#define GPIO_I2C_0_IOMUX_SCL                                      (IOMUX_PINCM2)
+#define GPIO_I2C_0_IOMUX_SCL_FUNC                       IOMUX_PINCM2_PF_I2C0_SCL
+
+
 /* Defines for UART_0 */
 #define UART_0_INST                                                        UART0
 #define UART_0_INST_IRQHandler                                  UART0_IRQHandler
@@ -240,9 +256,10 @@ extern "C" {
 #define ENCODERA_PORT                                                    (GPIOA)
 
 /* Defines for E1A: GPIOA.25 with pinCMx 55 on package pin 26 */
-// pins affected by this interrupt request:["E1A","E1B"]
-#define ENCODERA_INT_IRQN                                       (GPIOA_INT_IRQn)
-#define ENCODERA_INT_IIDX                       (DL_INTERRUPT_GROUP1_IIDX_GPIOA)
+// groups represented: ["MPU6050_INT","ENCODERA"]
+// pins affected: ["INT_PIN","E1A","E1B"]
+#define GPIO_MULTIPLE_GPIOA_INT_IRQN                            (GPIOA_INT_IRQn)
+#define GPIO_MULTIPLE_GPIOA_INT_IIDX            (DL_INTERRUPT_GROUP1_IIDX_GPIOA)
 #define ENCODERA_E1A_IIDX                                   (DL_GPIO_IIDX_DIO25)
 #define ENCODERA_E1A_PIN                                        (DL_GPIO_PIN_25)
 #define ENCODERA_E1A_IOMUX                                       (IOMUX_PINCM55)
@@ -280,6 +297,13 @@ extern "C" {
 #define LF04_DH4_PORT                                                    (GPIOB)
 #define LF04_DH4_PIN                                            (DL_GPIO_PIN_17)
 #define LF04_DH4_IOMUX                                           (IOMUX_PINCM43)
+/* Port definition for Pin Group MPU6050_INT */
+#define MPU6050_INT_PORT                                                 (GPIOA)
+
+/* Defines for INT_PIN: GPIOA.7 with pinCMx 14 on package pin 49 */
+#define MPU6050_INT_INT_PIN_IIDX                             (DL_GPIO_IIDX_DIO7)
+#define MPU6050_INT_INT_PIN_PIN                                  (DL_GPIO_PIN_7)
+#define MPU6050_INT_INT_PIN_IOMUX                                (IOMUX_PINCM14)
 
 
 
@@ -292,6 +316,7 @@ void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_0_init(void);
 void SYSCFG_DL_PWM_1_init(void);
 void SYSCFG_DL_TIMER_0_init(void);
+void SYSCFG_DL_I2C_0_init(void);
 void SYSCFG_DL_UART_0_init(void);
 void SYSCFG_DL_UART_1_init(void);
 void SYSCFG_DL_ADC12_VOLTAGE_init(void);

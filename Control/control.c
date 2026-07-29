@@ -19,6 +19,7 @@ All rights reserved
 ***********************************************/
 #include "control.h"
 #include "IR_Module.h"
+#include "imu/imu.h"
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
@@ -26,8 +27,10 @@ int Servo=1500;
 Encoder OriginalEncoder; 					//编码器原始数据   
 Motor_parameter MotorA,MotorB;				//左右电机相关变量
 float Velocity_KP=400,Velocity_KI=300;	
-int Run_Mode=0;//小车运行模式
+int Run_Mode=RUN_MODE_APP;//小车运行模式
 u8 Flag_Stop=1;//小车启动标志位
+volatile uint8_t Menu_Active=1U;
+volatile uint8_t Menu_Selection=RUN_MODE_APP;
 static u8 Reset_Left_PI, Reset_Right_PI;
 void TIMER_0_INST_IRQHandler(void)
 {
@@ -37,6 +40,7 @@ void TIMER_0_INST_IRQHandler(void)
     {
         if(DL_TIMER_IIDX_ZERO)
         {
+            tick_ms += 5U;
 			
 			Key();
 			LED_Flash(100);
@@ -55,10 +59,10 @@ void TIMER_0_INST_IRQHandler(void)
 				Set_PWM(0,0,0);
 				return;
 			}
-			if(Run_Mode==0)
+			if(Run_Mode==RUN_MODE_APP)
 			{
 				Get_RC();         //Handle the APP remote commands //处理APP遥控命令
-			}else if(Run_Mode==1){
+			}else if(Run_Mode==RUN_MODE_LINE_TRACK){
 				IR_Ackermann_LineTrack();
 			}
 //			//计算左右电机对应的PWM
@@ -88,8 +92,10 @@ void Get_Velocity_From_Encoder(int Encoder1,int Encoder2)
 	OriginalEncoder.B=-Encoder2;	
 	Encoder_A_pr=OriginalEncoder.A; Encoder_B_pr=-OriginalEncoder.B;
 	//编码器原始数据转换为车轮速度，单位m/s
-	MotorA.Current_Encoder= Encoder_A_pr*Frequency*Perimeter/728.0f;  //2倍频*28减速比*13线数
-	MotorB.Current_Encoder= Encoder_B_pr*Frequency*Perimeter/728.0f;   //2*28*13=728
+	MotorA.Current_Encoder =
+		Encoder_A_pr * Frequency / ENCODER_LEFT_COUNTS_PER_METER;
+	MotorB.Current_Encoder =
+		Encoder_B_pr * Frequency / ENCODER_RIGHT_COUNTS_PER_METER;
 	
 }
 //运动学逆解，由x和y的速度得到编码器的速度,Vx是m/s,Vz单位是度/s(角度制)
@@ -277,17 +283,51 @@ Output  : none
 **************************************************************************/
 void Key(void)
 {
-	u8 tmp,tmp2;
-	tmp=key_scan(200);//click_N_Double(50);
-	if(tmp==1)
-	{
-		Flag_Stop=!Flag_Stop;
-	}		//单击控制小车的启停
-	else if(tmp==2)
-	{
-		Run_Mode++;
-		Run_Mode%=2;
-	}
+    u8 tmp;
+
+    tmp = key_scan(200);
+
+    if (Menu_Active)
+    {
+        Flag_Stop = 1;
+
+        if (tmp == USEKEY_single_click)
+        {
+            Menu_Selection =
+                (u8)((Menu_Selection + 1U) % RUN_MODE_COUNT);
+        }
+        else if (tmp == USEKEY_double_click)
+        {
+            Run_Mode = Menu_Selection;
+            Menu_Active = 0U;
+            Flag_Stop = 1;
+        }
+        return;
+    }
+
+    if (tmp == USEKEY_long_click)
+    {
+        Flag_Stop = 1;
+        Reset_Velocity_PI();
+        IR_Ackermann_LineTrack_Reset();
+
+        Menu_Selection = (u8)Run_Mode;
+        Menu_Active = 1U;
+        return;
+    }
+
+    if (tmp == USEKEY_single_click)
+    {
+        if (Run_Mode == RUN_MODE_IMU_DEBUG)
+        {
+            Flag_Stop = 1;
+            imu_request_yaw_zero();
+        }
+        else
+        {
+            Flag_Stop = !Flag_Stop;
+        }
+    }
 }
 /**************************************************************************
 Function: Limiting function

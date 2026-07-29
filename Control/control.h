@@ -21,11 +21,19 @@ All rights reserved
 #define __CONTROL_H
 #include "board.h"
 
+#define RUN_MODE_APP          0
+#define RUN_MODE_LINE_TRACK   1
+#define RUN_MODE_IMU_DEBUG    2
+#define RUN_MODE_COUNT        3
+
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
 #define Frequency	200.0f			//每5ms读取一次编码器的值
+#define ENCODER_LEFT_COUNTS_PER_METER  3507.66f
+#define ENCODER_RIGHT_COUNTS_PER_METER 3521.14f
 #define Perimeter	0.2104867	    //轮子周长(单位:m)=0.67*3.1415926
 #define Wheel_spacing 0.119f		
 #define Axle_spacing  0.143f
+#define DRIVE_WHEEL_SPACING 0.210f
 #define PI 3.1415926
 
 #define R3X_MOTOR_RATIO 28 //R3X小车电机减速比
@@ -53,6 +61,8 @@ extern Motor_parameter MotorA,MotorB;				//左右电机相关变量
 extern float Voltage_Count,Voltage_All,Voltage;
 extern float Velocity_KP,Velocity_KI;	
 extern int Run_Mode;//小车运行模式
+extern volatile uint8_t Menu_Active;
+extern volatile uint8_t Menu_Selection;
 void TIM6_Init(void); 
 void Get_Velocity_From_Encoder(int Encoder1,int Encoder2);
 float target_limit_float(float insert,float low,float high);

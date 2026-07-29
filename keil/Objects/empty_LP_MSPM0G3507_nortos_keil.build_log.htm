@@ -26,201 +26,175 @@ Project File Date:  07/29/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V6.24', folder: 'D:\Infineon\Keli\Keil_v5\ARM\ARMCLANG\Bin'
-Rebuild target 'MSPM0G3507_Project'
+Build target 'MSPM0G3507_Project'
 Before Build - User command #1: cmd.exe /C "D:\ti\keil_project\WHEELTEC_C07A_R3XAkm\keil\../tools/keil/syscfg.bat 'D:\ti\keil_project\WHEELTEC_C07A_R3XAkm\keil\' empty.syscfg"
 Couldn't find Sysconfig Tool "C:\ti\sysconfig_1.20.0\sysconfig_cli.bat"
 "Update the file located at <sdk path>/tools/keil/syscfg.bat"
-compiling dl_vref.c...
-assembling startup_mspm0g350x_uvision.s...
-compiling dl_trng.c...
-compiling dl_opa.c...
-compiling dl_timer.c...
-compiling dl_spi.c...
-compiling dl_uart.c...
-compiling dl_rtc_common.c...
-compiling empty.c...
 compiling board.c...
-compiling dl_mcan.c...
-compiling ti_msp_dl_config.c...
-compiling dl_mathacl.c...
-compiling dl_lcd.c...
-compiling dl_lfss.c...
-compiling dl_keystorectl.c...
-compiling dl_i2c.c...
-compiling dl_dma.c...
-compiling dl_dac12.c...
-compiling dl_crcp.c...
-compiling dl_flashctl.c...
-compiling dl_common.c...
-compiling dl_crc.c...
-compiling dl_aesadv.c...
-compiling dl_aes.c...
-compiling dl_interrupt.c...
-compiling dl_adc12.c...
-compiling oled.c...
-compiling key.c...
-compiling led.c...
-compiling motor.c...
+compiling empty.c...
 compiling encoder.c...
-compiling adc.c...
-compiling IR_Module.c...
+compiling key.c...
 compiling DataScope_DP.C...
+compiling adc.c...
+compiling motor.c...
+compiling uart_callback.c...
+compiling oled.c...
 compiling control.c...
-../Control/show.c(35): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   35 |              if(Car_Mode==0)   OLED_ShowString(0,0,"Mec ");
+../Control/show.c(241): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  241 |              if(Car_Mode==0)   OLED_ShowString(0,0,"Mec ");
       |                                                    ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(36): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   36 |         else if(Car_Mode==1)   OLED_ShowString(0,0,"Omni");
+../Control/show.c(242): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  242 |         else if(Car_Mode==1)   OLED_ShowString(0,0,"Omni");
       |                                                    ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(37): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   37 |         else if(Car_Mode==2)   OLED_ShowString(0,0,"AKM ");
+../Control/show.c(243): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  243 |         else if(Car_Mode==2)   OLED_ShowString(0,0,"AKM ");
       |                                                    ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(38): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   38 |         else if(Car_Mode==3)   OLED_ShowString(0,0,"Diff");
+../Control/show.c(244): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  244 |         else if(Car_Mode==3)   OLED_ShowString(0,0,"Diff");
       |                                                    ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(39): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   39 |         else if(Car_Mode==4)   OLED_ShowString(0,0,"4WD ");
+../Control/show.c(245): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  245 |         else if(Car_Mode==4)   OLED_ShowString(0,0,"4WD ");
       |                                                    ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(40): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   40 |                 else if(Car_Mode==5)   OLED_ShowString(0,0,"Tank");
+../Control/show.c(246): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  246 |                 else if(Car_Mode==5)   OLED_ShowString(0,0,"Tank");
       |                                                            ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(41): warning: passing 'char[8]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   41 |                 OLED_ShowString(0,10,"Servo: ");
+../Control/show.c(247): warning: passing 'char[8]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  247 |                 OLED_ShowString(0,10,"Servo: ");
       |                                      ^~~~~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(44): warning: passing 'char[4]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   44 |             if(Run_Mode==0)   OLED_ShowString(90,0,"APP");
+../Control/show.c(250): warning: passing 'char[4]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  250 |             if(Run_Mode==0)   OLED_ShowString(90,0,"APP");
       |                                                    ^~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(55): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   55 |                               OLED_ShowString(00,30,"L");
+../Control/show.c(261): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  261 |                               OLED_ShowString(00,30,"L");
       |                                                     ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(56): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   56 |         if((MotorA.Target_Encoder*1000)<0)          OLED_ShowString(16,30,"-"),
+../Control/show.c(262): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  262 |         if((MotorA.Target_Encoder*1000)<0)          OLED_ShowString(16,30,"-"),
       |                                                                           ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(58): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   58 |         if((MotorA.Target_Encoder*1000)>=0)       OLED_ShowString(16,30,"+"),
+../Control/show.c(264): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  264 |         if((MotorA.Target_Encoder*1000)>=0)       OLED_ShowString(16,30,"+"),
       |                                                                         ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(61): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   61 |         if(MotorA.Current_Encoder<0)   OLED_ShowString(60,30,"-");
+../Control/show.c(267): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  267 |         if(MotorA.Current_Encoder<0)   OLED_ShowString(60,30,"-");
       |                                                              ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(62): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   62 |         if(MotorA.Current_Encoder>=0)    OLED_ShowString(60,30,"+");
+../Control/show.c(268): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  268 |         if(MotorA.Current_Encoder>=0)    OLED_ShowString(60,30,"+");
       |                                                                ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(64): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   64 |                                                     OLED_ShowString(96,30,"mm/s");
+../Control/show.c(270): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  270 |                                                     OLED_ShowString(96,30,"mm/s");
       |                                                                           ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(67): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   67 |                               OLED_ShowString(00,40,"R");
+../Control/show.c(273): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  273 |                               OLED_ShowString(00,40,"R");
       |                                                     ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(68): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   68 |         if((MotorB.Target_Encoder*1000)<0)         OLED_ShowString(16,40,"-"),
+../Control/show.c(274): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  274 |         if((MotorB.Target_Encoder*1000)<0)         OLED_ShowString(16,40,"-"),
       |                                                                          ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(70): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   70 |         if((MotorB.Target_Encoder*1000)>=0)             OLED_ShowString(16,40,"+"),
+../Control/show.c(276): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  276 |         if((MotorB.Target_Encoder*1000)>=0)             OLED_ShowString(16,40,"+"),
       |                                                                               ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(73): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   73 |         if(MotorB.Current_Encoder<0)    OLED_ShowString(60,40,"-");
+../Control/show.c(279): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  279 |         if(MotorB.Current_Encoder<0)    OLED_ShowString(60,40,"-");
       |                                                               ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(74): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   74 |         if(MotorB.Current_Encoder>=0)   OLED_ShowString(60,40,"+");
+../Control/show.c(280): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  280 |         if(MotorB.Current_Encoder>=0)   OLED_ShowString(60,40,"+");
       |                                                               ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(76): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   76 |                                                     OLED_ShowString(96,40,"mm/s");
+../Control/show.c(282): warning: passing 'char[5]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  282 |                                                     OLED_ShowString(96,40,"mm/s");
       |                                                                           ^~~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(79): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   79 |                               OLED_ShowString(0,50,"V");
+../Control/show.c(285): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  285 |                               OLED_ShowString(0,50,"V");
       |                                                    ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(80): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   80 |                                                     OLED_ShowString(30,50,".");
+../Control/show.c(286): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  286 |                                                     OLED_ShowString(30,50,".");
       |                                                                           ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(81): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   81 |                                                     OLED_ShowString(64,50,"V");
+../Control/show.c(287): warning: passing 'char[2]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  287 |                                                     OLED_ShowString(64,50,"V");
       |                                                                           ^~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(84): warning: passing 'char[4]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   84 |         if(Flag_Stop)         OLED_ShowString(95,50,"OFF");
+../Control/show.c(290): warning: passing 'char[4]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  290 |         if(Flag_Stop)         OLED_ShowString(95,50,"OFF");
       |                                                     ^~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
-../Control/show.c(85): warning: passing 'char[4]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
-   85 |         if(!Flag_Stop)        OLED_ShowString(95,50,"ON ");
+../Control/show.c(291): warning: passing 'char[4]' to parameter of type 'const uint8_t *' (aka 'const unsigned char *') converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+  291 |         if(!Flag_Stop)        OLED_ShowString(95,50,"ON ");
       |                                                     ^~~~~
 ../Hardware\oled.h(22): note: passing argument to parameter 'p' here
    22 | void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p);
       |                                                         ^
 25 warnings generated.
 compiling show.c...
-compiling uart_callback.c...
+compiling IR_Module.c...
 linking...
-Program Size: Code=23512 RO-data=3604 RW-data=68 ZI-data=5924  
+Program Size: Code=39424 RO-data=6884 RW-data=136 ZI-data=6048  
 FromELF: creating hex file...
 ".\Objects\empty_LP_MSPM0G3507_nortos_keil.axf" - 0 Error(s), 25 Warning(s).
 
