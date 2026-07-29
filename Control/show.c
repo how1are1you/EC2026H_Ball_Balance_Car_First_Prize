@@ -40,6 +40,8 @@ static void oled_show_text(
     OLED_ShowString(x, y, (const uint8_t *)text);
 }
 
+static void oled_show_voltage(uint8_t y);
+
 static uint8_t imu_unsigned_digits(uint32_t value)
 {
     uint8_t digits = 1U;
@@ -356,45 +358,86 @@ static const char *straight_turn_state_text(
     }
 }
 
+static const char *straight_turn_status_text(
+    StraightTurnState_t state)
+{
+    switch (state)
+    {
+        case STRAIGHT_TURN_IDLE:
+            return (StraightTurnElapsedMs == 0U) ? "READY" : "STOP";
+        case STRAIGHT_TURN_DONE:
+            return "DONE";
+        case STRAIGHT_TURN_FAULT:
+            return "FAULT";
+        default:
+            return "RUN";
+    }
+}
+
+static void straight_turn_show_time(uint8_t y)
+{
+    uint32_t elapsed_ms = StraightTurnElapsedMs;
+    uint32_t seconds = elapsed_ms / 1000U;
+    uint32_t milliseconds = elapsed_ms % 1000U;
+
+    if (seconds > 99U)
+    {
+        seconds = 99U;
+        milliseconds = 999U;
+    }
+
+    oled_show_text(0, y, "TIME:");
+    OLED_ShowChar(40, y, (uint8_t)('0' + seconds / 10U), 12, 1);
+    OLED_ShowChar(46, y, (uint8_t)('0' + seconds % 10U), 12, 1);
+    OLED_ShowChar(52, y, '.', 12, 1);
+    OLED_ShowChar(
+        58, y, (uint8_t)('0' + milliseconds / 100U), 12, 1);
+    OLED_ShowChar(
+        64, y, (uint8_t)('0' + (milliseconds / 10U) % 10U), 12, 1);
+    OLED_ShowChar(
+        70, y, (uint8_t)('0' + milliseconds % 10U), 12, 1);
+    OLED_ShowChar(78, y, 's', 12, 1);
+}
+
 static void straight_turn_oled_show(void)
 {
-    uint32_t distance_mm =
-        (uint32_t)(StraightTurnDistanceM * 1000.0f + 0.5f);
-    uint32_t radius_mm =
-        (uint32_t)(TurnCalibrationRadiusM * 1000.0f + 0.5f);
+    uint32_t target_speed_mm_s =
+        (Run_Mode == RUN_MODE_BALL_LAP) ?
+            (uint32_t)(STRAIGHT_TURN_BALL_SPEED_MPS * 1000.0f + 0.5f) :
+            (uint32_t)(STRAIGHT_TURN_FAST_SPEED_MPS * 1000.0f + 0.5f);
 
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
-    oled_show_text(0, 0, "LINE+ARC");
     oled_show_text(
-        58, 0, straight_turn_state_text(StraightTurnState));
-
-    oled_show_text(0, 10, "S:");
-    OLED_ShowNumber(16, 10, distance_mm, 4, 12);
-    oled_show_text(44, 10, "/1500mm");
-
-    oled_show_text(0, 20, "Y:");
-    imu_show_signed_tenths(16, 20, StraightTurnYawDeg);
-    oled_show_text(64, 20, "deg");
-
-    oled_show_text(0, 30, "IR:");
-    OLED_ShowNumber(20, 30, LF04_DH1_State, 1, 12);
-    OLED_ShowNumber(28, 30, LF04_DH2_State, 1, 12);
-    OLED_ShowNumber(36, 30, LF04_DH3_State, 1, 12);
-    OLED_ShowNumber(44, 30, LF04_DH4_State, 1, 12);
-    oled_show_text(58, 30, "E:");
-    imu_show_signed_tenths(74, 30, StraightTurnLineError);
-
-    oled_show_text(0, 40, "H:");
-    imu_show_signed_tenths(
-        16, 40, StraightTurnHeadingErrorDeg);
-    oled_show_text(64, 40, "F:");
-    OLED_ShowNumber(80, 40, StraightTurnFault, 1, 12);
-
-    oled_show_text(0, 50, "R:");
-    OLED_ShowNumber(16, 50, radius_mm, 3, 12);
-    oled_show_text(38, 50, "mm");
+        0, 0, (Run_Mode == RUN_MODE_BALL_LAP) ? "BALL LAP" : "ONE LAP");
     oled_show_text(
-        68, 50, Flag_Stop ? "1:START" : "1:STOP");
+        72, 0, straight_turn_status_text(StraightTurnState));
+
+    straight_turn_show_time(10);
+
+    oled_show_text(0, 20, "STAGE:");
+    oled_show_text(
+        48, 20, straight_turn_state_text(StraightTurnState));
+
+    oled_show_text(0, 30, "SPD:");
+    OLED_ShowNumber(32, 30, target_speed_mm_s, 3, 12);
+    oled_show_text(54, 30, "mm/s");
+
+    oled_show_voltage(40);
+
+    if (StraightTurnState == STRAIGHT_TURN_DONE)
+    {
+        oled_show_text(0, 50, "TIME LOCKED");
+    }
+    else if (StraightTurnState == STRAIGHT_TURN_FAULT)
+    {
+        oled_show_text(0, 50, "FAULT:");
+        OLED_ShowNumber(48, 50, StraightTurnFault, 1, 12);
+        oled_show_text(72, 50, "1:RETRY");
+    }
+    else
+    {
+        oled_show_text(0, 50, Flag_Stop ? "1:START" : "1:STOP");
+    }
     OLED_Refresh_Gram();
 }
 
@@ -407,16 +450,37 @@ static void menu_show_item(
     oled_show_text(6, y, text);
 }
 
+static void oled_show_voltage(uint8_t y)
+{
+    float voltage = Voltage;
+    uint16_t voltage_tenths;
+
+    if (voltage < 0.0f)
+    {
+        voltage = 0.0f;
+    }
+    else if (voltage > 99.9f)
+    {
+        voltage = 99.9f;
+    }
+    voltage_tenths = (uint16_t)(voltage * 10.0f + 0.5f);
+
+    oled_show_text(0, y, "VOLT:");
+    OLED_ShowNumber(40, y, voltage_tenths / 10U, 2, 12);
+    OLED_ShowChar(52, y, '.', 12, 1);
+    OLED_ShowNumber(58, y, voltage_tenths % 10U, 1, 12);
+    OLED_ShowChar(64, y, 'V', 12, 1);
+}
+
 static void menu_oled_show(void)
 {
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
 
     oled_show_text(0, 0, "SELECT MODE");
-    menu_show_item(10, RUN_MODE_APP, "APP CONTROL");
-    menu_show_item(20, RUN_MODE_ONE_LAP, "ONE LAP");
-    menu_show_item(30, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
-    menu_show_item(40, RUN_MODE_TURN_CAL, "TURN CAL");
-    menu_show_item(50, RUN_MODE_STRAIGHT_TURN, "LINE+ARC");
+    menu_show_item(20, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
+    menu_show_item(30, RUN_MODE_BALL_LAP, "BALL LAP");
+    menu_show_item(40, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
+    oled_show_voltage(50);
 
     OLED_Refresh_Gram();
 }
@@ -451,7 +515,8 @@ void oled_show(void)
         turn_calibration_oled_show();
         return;
     }
-    if (Run_Mode == RUN_MODE_STRAIGHT_TURN)
+    if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
+        Run_Mode == RUN_MODE_BALL_LAP)
     {
         straight_turn_oled_show();
         return;
@@ -533,7 +598,8 @@ void APP_Show(void)
         Run_Mode == RUN_MODE_ONE_LAP ||
         Run_Mode == RUN_MODE_IMU_DEBUG ||
         Run_Mode == RUN_MODE_TURN_CAL ||
-        Run_Mode == RUN_MODE_STRAIGHT_TURN)
+        Run_Mode == RUN_MODE_STRAIGHT_TURN ||
+        Run_Mode == RUN_MODE_BALL_LAP)
     {
         return;
     }

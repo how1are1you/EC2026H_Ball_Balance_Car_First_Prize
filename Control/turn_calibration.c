@@ -6,7 +6,8 @@
 #include <math.h>
 
 #define TURN_CALIBRATION_CONTROL_PERIOD_S  (0.005f)
-#define TURN_CALIBRATION_SPEED_MPS         (0.20f)
+#define TURN_CALIBRATION_DEFAULT_SPEED_MPS (0.20f)
+#define TURN_CALIBRATION_MAX_SPEED_MPS     (0.50f)
 #define TURN_CALIBRATION_ACCELERATION_MPS2 (0.30f)
 #define TURN_CALIBRATION_DECELERATION_MPS2 (0.40f)
 #define TURN_CALIBRATION_TARGET_YAW_DEG    (180.0f)
@@ -37,6 +38,8 @@ static uint32_t turn_calibration_last_sample_count;
 static uint16_t turn_calibration_elapsed_ticks;
 static uint16_t turn_calibration_imu_stale_ticks;
 static uint8_t turn_calibration_stop_on_complete;
+static float turn_calibration_cruise_speed_mps =
+    TURN_CALIBRATION_DEFAULT_SPEED_MPS;
 
 static float turn_calibration_limit(
     float value,
@@ -81,6 +84,8 @@ void TurnCalibration_Reset(void)
     turn_calibration_elapsed_ticks = 0U;
     turn_calibration_imu_stale_ticks = 0U;
     turn_calibration_stop_on_complete = 1U;
+    turn_calibration_cruise_speed_mps =
+        TURN_CALIBRATION_DEFAULT_SPEED_MPS;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
 }
@@ -93,12 +98,16 @@ void TurnCalibration_Start(void)
 
 void TurnCalibration_StartAngle(float target_yaw_deg)
 {
-    TurnCalibration_StartMoving(target_yaw_deg, 0.0f);
+    TurnCalibration_StartMoving(
+        target_yaw_deg,
+        0.0f,
+        TURN_CALIBRATION_DEFAULT_SPEED_MPS);
 }
 
 void TurnCalibration_StartMoving(
     float target_yaw_deg,
-    float initial_speed_mps)
+    float initial_speed_mps,
+    float cruise_speed_mps)
 {
     imu_sample_t sample;
 
@@ -116,11 +125,16 @@ void TurnCalibration_StartMoving(
     turn_calibration_last_sample_count = sample.sample_count;
     TurnCalibrationTargetYawDeg =
         turn_calibration_limit(target_yaw_deg, 1.0f, 360.0f);
+    turn_calibration_cruise_speed_mps =
+        turn_calibration_limit(
+            cruise_speed_mps,
+            0.05f,
+            TURN_CALIBRATION_MAX_SPEED_MPS);
     TurnCalibrationCommandSpeed =
         turn_calibration_limit(
             initial_speed_mps,
             0.0f,
-            TURN_CALIBRATION_SPEED_MPS);
+            turn_calibration_cruise_speed_mps);
     TurnCalibrationState = TURN_CALIBRATION_RUNNING;
     Flag_Stop = 0U;
 }
@@ -128,6 +142,7 @@ void TurnCalibration_StartMoving(
 void TurnCalibration_StartMovingFromYaw(
     float target_yaw_deg,
     float initial_speed_mps,
+    float cruise_speed_mps,
     float start_yaw_deg,
     uint32_t last_sample_count)
 {
@@ -136,11 +151,16 @@ void TurnCalibration_StartMovingFromYaw(
     turn_calibration_last_sample_count = last_sample_count;
     TurnCalibrationTargetYawDeg =
         turn_calibration_limit(target_yaw_deg, 1.0f, 360.0f);
+    turn_calibration_cruise_speed_mps =
+        turn_calibration_limit(
+            cruise_speed_mps,
+            0.05f,
+            TURN_CALIBRATION_MAX_SPEED_MPS);
     TurnCalibrationCommandSpeed =
         turn_calibration_limit(
             initial_speed_mps,
             0.0f,
-            TURN_CALIBRATION_SPEED_MPS);
+            turn_calibration_cruise_speed_mps);
     TurnCalibrationState = TURN_CALIBRATION_RUNNING;
     Flag_Stop = 0U;
 }
@@ -148,12 +168,14 @@ void TurnCalibration_StartMovingFromYaw(
 void TurnCalibration_StartMovingFromYawContinuous(
     float target_yaw_deg,
     float initial_speed_mps,
+    float cruise_speed_mps,
     float start_yaw_deg,
     uint32_t last_sample_count)
 {
     TurnCalibration_StartMovingFromYaw(
         target_yaw_deg,
         initial_speed_mps,
+        cruise_speed_mps,
         start_yaw_deg,
         last_sample_count);
     turn_calibration_stop_on_complete = 0U;
@@ -273,7 +295,7 @@ void TurnCalibration_Run(void)
         TURN_CALIBRATION_PI / 180.0f;
     remaining_arc_m =
         TurnCalibrationRadiusM * remaining_angle_rad;
-    desired_speed = TURN_CALIBRATION_SPEED_MPS;
+    desired_speed = turn_calibration_cruise_speed_mps;
     if (turn_calibration_stop_on_complete != 0U)
     {
         braking_speed = sqrtf(

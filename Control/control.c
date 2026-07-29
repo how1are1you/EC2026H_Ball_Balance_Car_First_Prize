@@ -29,10 +29,10 @@ int Servo=1500;
 Encoder OriginalEncoder; 					//编码器原始数据   
 Motor_parameter MotorA,MotorB;				//左右电机相关变量
 float Velocity_KP=400,Velocity_KI=300;	
-int Run_Mode=RUN_MODE_APP;//小车运行模式
+int Run_Mode=RUN_MODE_MENU_DEFAULT;//小车运行模式
 u8 Flag_Stop=1;//小车启动标志位
 volatile uint8_t Menu_Active=1U;
-volatile uint8_t Menu_Selection=RUN_MODE_APP;
+volatile uint8_t Menu_Selection=RUN_MODE_MENU_DEFAULT;
 static u8 Reset_Left_PI, Reset_Right_PI;
 void TIMER_0_INST_IRQHandler(void)
 {
@@ -71,7 +71,8 @@ void TIMER_0_INST_IRQHandler(void)
 				IR_Differential_OneLap();
 			}else if(Run_Mode==RUN_MODE_TURN_CAL){
 				TurnCalibration_Run();
-			}else if(Run_Mode==RUN_MODE_STRAIGHT_TURN){
+			}else if(Run_Mode==RUN_MODE_STRAIGHT_TURN ||
+			         Run_Mode==RUN_MODE_BALL_LAP){
 				StraightTurnTest_Run();
 			}
 			if (Flag_Stop)
@@ -283,8 +284,18 @@ void Key(void)
 
         if (tmp == USEKEY_single_click)
         {
-            Menu_Selection =
-                (u8)((Menu_Selection + 1U) % RUN_MODE_COUNT);
+            if (Menu_Selection == RUN_MODE_STRAIGHT_TURN)
+            {
+                Menu_Selection = RUN_MODE_BALL_LAP;
+            }
+            else if (Menu_Selection == RUN_MODE_BALL_LAP)
+            {
+                Menu_Selection = RUN_MODE_IMU_DEBUG;
+            }
+            else
+            {
+                Menu_Selection = RUN_MODE_STRAIGHT_TURN;
+            }
         }
         else if (tmp == USEKEY_double_click)
         {
@@ -303,7 +314,16 @@ void Key(void)
         TurnCalibration_Reset();
         StraightTurnTest_Reset();
 
-        Menu_Selection = (u8)Run_Mode;
+        if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
+            Run_Mode == RUN_MODE_BALL_LAP ||
+            Run_Mode == RUN_MODE_IMU_DEBUG)
+        {
+            Menu_Selection = (u8)Run_Mode;
+        }
+        else
+        {
+            Menu_Selection = RUN_MODE_MENU_DEFAULT;
+        }
         Menu_Active = 1U;
         return;
     }
@@ -338,12 +358,16 @@ void Key(void)
                 TurnCalibration_Stop();
             }
         }
-        else if (Run_Mode == RUN_MODE_STRAIGHT_TURN)
+        else if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
+                 Run_Mode == RUN_MODE_BALL_LAP)
         {
             if (Flag_Stop)
             {
                 Reset_Velocity_PI();
-                StraightTurnTest_Start();
+                StraightTurnTest_Start(
+                    (Run_Mode == RUN_MODE_BALL_LAP) ?
+                        STRAIGHT_TURN_BALL_SPEED_MPS :
+                        STRAIGHT_TURN_FAST_SPEED_MPS);
             }
             else
             {

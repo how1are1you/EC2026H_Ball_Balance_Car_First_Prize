@@ -7,26 +7,25 @@
 
 #include <math.h>
 
-#define STRAIGHT_TURN_CONTROL_PERIOD_S       (0.005f)
-#define STRAIGHT_TURN_DISTANCE_M             (1.500f)
-#define STRAIGHT_TURN_SPEED_MPS              (0.20f)
-#define STRAIGHT_TURN_ACCELERATION_MPS2      (0.30f)
-#define STRAIGHT_TURN_LINE_HEADING_GAIN_DEG  (3.0f)
+#define STRAIGHT_TURN_CONTROL_PERIOD_S (0.005f)
+#define STRAIGHT_TURN_DISTANCE_M (1.500f)
+#define STRAIGHT_TURN_ACCELERATION_MPS2 (0.30f)
+#define STRAIGHT_TURN_LINE_HEADING_GAIN_DEG (3.0f)
 #define STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG (6.0f)
-#define STRAIGHT_TURN_HEADING_KP              (0.025f)
-#define STRAIGHT_TURN_GYRO_KD                 (0.0020f)
-#define STRAIGHT_TURN_MAX_OMEGA_RAD_S         (0.22f)
-#define STRAIGHT_TURN_LINE_FILTER_GAIN        (0.08f)
-#define STRAIGHT_TURN_EXIT_FILTER_GAIN        (0.15f)
-#define STRAIGHT_TURN_MAX_DISTANCE_STEP_M     (0.005f)
-#define STRAIGHT_TURN_LINE_LOST_TICKS         (200U)
-#define STRAIGHT_TURN_IMU_STALE_TICKS         (200U)
-#define STRAIGHT_TURN_TIMEOUT_TICKS           (8000U)
-#define STRAIGHT_TURN_ARC_TARGET_DEG          (178.0f)
-#define STRAIGHT_TURN_ARC_MONITOR_DEG         (3.0f)
-#define STRAIGHT_TURN_ARC_BLEND_DEG           (2.0f)
-#define STRAIGHT_TURN_ARC_STOP_MARGIN_DEG     (0.5f)
-#define STRAIGHT_TURN_CLOCKWISE_HEADING_DEG   (-180.0f)
+#define STRAIGHT_TURN_HEADING_KP (0.025f)
+#define STRAIGHT_TURN_GYRO_KD (0.0020f)
+#define STRAIGHT_TURN_MAX_OMEGA_RAD_S (0.22f)
+#define STRAIGHT_TURN_LINE_FILTER_GAIN (0.08f)
+#define STRAIGHT_TURN_EXIT_FILTER_GAIN (0.15f)
+#define STRAIGHT_TURN_MAX_DISTANCE_STEP_M (0.005f)
+#define STRAIGHT_TURN_LINE_LOST_TICKS (200U)
+#define STRAIGHT_TURN_IMU_STALE_TICKS (200U)
+#define STRAIGHT_TURN_TIMEOUT_TICKS (8000U)
+#define STRAIGHT_TURN_ARC_TARGET_DEG (176.0f)
+#define STRAIGHT_TURN_ARC_MONITOR_DEG (3.0f)
+#define STRAIGHT_TURN_ARC_BLEND_DEG (2.0f)
+#define STRAIGHT_TURN_ARC_STOP_MARGIN_DEG (0.5f)
+#define STRAIGHT_TURN_CLOCKWISE_HEADING_DEG (-180.0f)
 
 volatile StraightTurnState_t StraightTurnState =
     STRAIGHT_TURN_IDLE;
@@ -49,6 +48,8 @@ static uint32_t straight_turn_last_imu_sample;
 static uint16_t straight_turn_imu_stale_ticks;
 static uint16_t straight_turn_line_lost_ticks;
 static uint16_t straight_turn_elapsed_ticks;
+static float straight_turn_target_speed_mps =
+    STRAIGHT_TURN_FAST_SPEED_MPS;
 
 static float straight_turn_limit(
     float value,
@@ -199,13 +200,13 @@ static void straight_turn_command_straight(void)
         STRAIGHT_TURN_CONTROL_PERIOD_S;
 
     if (StraightTurnCommandSpeed <
-        STRAIGHT_TURN_SPEED_MPS - speed_step)
+        straight_turn_target_speed_mps - speed_step)
     {
         StraightTurnCommandSpeed += speed_step;
     }
     else
     {
-        StraightTurnCommandSpeed = STRAIGHT_TURN_SPEED_MPS;
+        StraightTurnCommandSpeed = straight_turn_target_speed_mps;
     }
     Get_Target_Encoder(
         StraightTurnCommandSpeed,
@@ -224,6 +225,7 @@ static void straight_turn_start_arc(uint8_t first_arc)
         TurnCalibration_StartMovingFromYawContinuous(
             STRAIGHT_TURN_ARC_TARGET_DEG,
             StraightTurnCommandSpeed,
+            straight_turn_target_speed_mps,
             straight_turn_arc_start_yaw,
             straight_turn_last_imu_sample);
     }
@@ -233,6 +235,7 @@ static void straight_turn_start_arc(uint8_t first_arc)
         TurnCalibration_StartMovingFromYaw(
             STRAIGHT_TURN_ARC_TARGET_DEG,
             StraightTurnCommandSpeed,
+            straight_turn_target_speed_mps,
             straight_turn_arc_start_yaw,
             straight_turn_last_imu_sample);
     }
@@ -242,8 +245,7 @@ static void straight_turn_run_straight(void)
 {
     float distance_step;
     uint8_t first_straight =
-        (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1) ?
-        1U : 0U;
+        (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1) ? 1U : 0U;
 
     if (straight_turn_update_imu() == 0U ||
         straight_turn_update_line() == 0U)
@@ -303,8 +305,7 @@ static void straight_turn_blend_arc_exit(float yaw_magnitude)
 static void straight_turn_run_arc(void)
 {
     uint8_t first_arc =
-        (StraightTurnState == STRAIGHT_TURN_ARC_1) ?
-        1U : 0U;
+        (StraightTurnState == STRAIGHT_TURN_ARC_1) ? 1U : 0U;
     float yaw_magnitude;
 
     TurnCalibration_Run();
@@ -319,12 +320,12 @@ static void straight_turn_run_arc(void)
     if (first_arc != 0U &&
         yaw_magnitude >=
             STRAIGHT_TURN_ARC_TARGET_DEG -
-            STRAIGHT_TURN_ARC_MONITOR_DEG)
+                STRAIGHT_TURN_ARC_MONITOR_DEG)
     {
         straight_turn_monitor_arc_exit();
         if (yaw_magnitude >=
             STRAIGHT_TURN_ARC_TARGET_DEG -
-            STRAIGHT_TURN_ARC_BLEND_DEG)
+                STRAIGHT_TURN_ARC_BLEND_DEG)
         {
             straight_turn_blend_arc_exit(yaw_magnitude);
         }
@@ -381,11 +382,13 @@ void StraightTurnTest_Reset(void)
     TurnCalibration_Reset();
 }
 
-void StraightTurnTest_Start(void)
+void StraightTurnTest_Start(float target_speed_mps)
 {
     imu_sample_t sample;
 
     StraightTurnTest_Reset();
+    straight_turn_target_speed_mps =
+        straight_turn_limit(target_speed_mps, 0.05f, 0.50f);
     imu_get_snapshot(&sample);
     if (sample.status != IMU_STATUS_READY || sample.valid == 0U)
     {
