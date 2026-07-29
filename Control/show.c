@@ -339,10 +339,14 @@ static const char *straight_turn_state_text(
     {
         case STRAIGHT_TURN_IDLE:
             return "IDLE";
-        case STRAIGHT_TURN_STRAIGHT:
-            return "LINE";
-        case STRAIGHT_TURN_ARC:
-            return "ARC";
+        case STRAIGHT_TURN_STRAIGHT_1:
+            return "LINE1";
+        case STRAIGHT_TURN_ARC_1:
+            return "ARC1";
+        case STRAIGHT_TURN_STRAIGHT_2:
+            return "LINE2";
+        case STRAIGHT_TURN_ARC_2:
+            return "ARC2";
         case STRAIGHT_TURN_DONE:
             return "DONE";
         case STRAIGHT_TURN_FAULT:

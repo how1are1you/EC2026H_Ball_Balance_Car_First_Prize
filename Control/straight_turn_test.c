@@ -17,11 +17,16 @@
 #define STRAIGHT_TURN_GYRO_KD                 (0.0020f)
 #define STRAIGHT_TURN_MAX_OMEGA_RAD_S         (0.22f)
 #define STRAIGHT_TURN_LINE_FILTER_GAIN        (0.08f)
+#define STRAIGHT_TURN_EXIT_FILTER_GAIN        (0.15f)
 #define STRAIGHT_TURN_MAX_DISTANCE_STEP_M     (0.005f)
 #define STRAIGHT_TURN_LINE_LOST_TICKS         (200U)
 #define STRAIGHT_TURN_IMU_STALE_TICKS         (200U)
-#define STRAIGHT_TURN_TIMEOUT_TICKS           (4000U)
-#define STRAIGHT_TURN_ARC_TARGET_DEG          (179.0f)
+#define STRAIGHT_TURN_TIMEOUT_TICKS           (8000U)
+#define STRAIGHT_TURN_ARC_TARGET_DEG          (178.0f)
+#define STRAIGHT_TURN_ARC_MONITOR_DEG         (3.0f)
+#define STRAIGHT_TURN_ARC_BLEND_DEG           (2.0f)
+#define STRAIGHT_TURN_ARC_STOP_MARGIN_DEG     (0.5f)
+#define STRAIGHT_TURN_CLOCKWISE_HEADING_DEG   (-180.0f)
 
 volatile StraightTurnState_t StraightTurnState =
     STRAIGHT_TURN_IDLE;
@@ -33,8 +38,12 @@ volatile float StraightTurnHeadingErrorDeg;
 volatile float StraightTurnCommandSpeed;
 volatile uint32_t StraightTurnElapsedMs;
 
-static float straight_turn_start_yaw;
+static float straight_turn_initial_yaw;
+static float straight_turn_straight_heading_yaw;
+static float straight_turn_arc_start_yaw;
+static float straight_turn_last_valid_yaw;
 static float straight_turn_filtered_line_error;
+static float straight_turn_exit_line_error;
 static float straight_turn_gyro_z_dps;
 static uint32_t straight_turn_last_imu_sample;
 static uint16_t straight_turn_imu_stale_ticks;
@@ -80,6 +89,272 @@ static void straight_turn_fault(uint8_t fault)
     Flag_Stop = 1U;
 }
 
+static uint8_t straight_turn_update_imu(void)
+{
+    imu_sample_t sample;
+
+    imu_get_snapshot(&sample);
+    if (sample.status == IMU_STATUS_READY &&
+        sample.valid != 0U &&
+        sample.sample_count != straight_turn_last_imu_sample)
+    {
+        straight_turn_last_imu_sample = sample.sample_count;
+        straight_turn_imu_stale_ticks = 0U;
+        straight_turn_last_valid_yaw =
+            sample.yaw_continuous_deg;
+        straight_turn_gyro_z_dps = sample.gyro_z_dps;
+        StraightTurnYawDeg =
+            straight_turn_last_valid_yaw -
+            straight_turn_initial_yaw;
+        return 1U;
+    }
+
+    if (straight_turn_imu_stale_ticks <
+        STRAIGHT_TURN_IMU_STALE_TICKS)
+    {
+        straight_turn_imu_stale_ticks++;
+        return 1U;
+    }
+
+    straight_turn_fault(STRAIGHT_TURN_FAULT_IMU_STALE);
+    return 0U;
+}
+
+static uint8_t straight_turn_update_line(void)
+{
+    float line_error;
+
+    if (IR_ReadLineErrorFour(&line_error) != 0U)
+    {
+        straight_turn_line_lost_ticks = 0U;
+        straight_turn_filtered_line_error +=
+            STRAIGHT_TURN_LINE_FILTER_GAIN *
+            (line_error - straight_turn_filtered_line_error);
+    }
+    else if (straight_turn_line_lost_ticks <
+             STRAIGHT_TURN_LINE_LOST_TICKS)
+    {
+        straight_turn_line_lost_ticks++;
+        straight_turn_filtered_line_error *= 0.98f;
+    }
+    else
+    {
+        straight_turn_fault(STRAIGHT_TURN_FAULT_LINE_LOST);
+        return 0U;
+    }
+
+    StraightTurnLineError =
+        straight_turn_filtered_line_error;
+    return 1U;
+}
+
+static void straight_turn_monitor_arc_exit(void)
+{
+    float line_error;
+
+    if (IR_ReadLineErrorFour(&line_error) == 0U)
+    {
+        return;
+    }
+
+    straight_turn_exit_line_error +=
+        STRAIGHT_TURN_EXIT_FILTER_GAIN *
+        (line_error - straight_turn_exit_line_error);
+    StraightTurnLineError = straight_turn_exit_line_error;
+}
+
+static float straight_turn_heading_omega(
+    float heading_yaw,
+    float line_error)
+{
+    float target_heading_yaw =
+        heading_yaw +
+        straight_turn_limit(
+            STRAIGHT_TURN_LINE_HEADING_GAIN_DEG * line_error,
+            -STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG,
+            STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG);
+    float command_omega;
+
+    StraightTurnHeadingErrorDeg =
+        straight_turn_wrap_180(
+            target_heading_yaw - straight_turn_last_valid_yaw);
+    command_omega =
+        STRAIGHT_TURN_HEADING_KP *
+            StraightTurnHeadingErrorDeg -
+        STRAIGHT_TURN_GYRO_KD * straight_turn_gyro_z_dps;
+    return straight_turn_limit(
+        command_omega,
+        -STRAIGHT_TURN_MAX_OMEGA_RAD_S,
+        STRAIGHT_TURN_MAX_OMEGA_RAD_S);
+}
+
+static void straight_turn_command_straight(void)
+{
+    float command_omega =
+        straight_turn_heading_omega(
+            straight_turn_straight_heading_yaw,
+            straight_turn_filtered_line_error);
+    float speed_step =
+        STRAIGHT_TURN_ACCELERATION_MPS2 *
+        STRAIGHT_TURN_CONTROL_PERIOD_S;
+
+    if (StraightTurnCommandSpeed <
+        STRAIGHT_TURN_SPEED_MPS - speed_step)
+    {
+        StraightTurnCommandSpeed += speed_step;
+    }
+    else
+    {
+        StraightTurnCommandSpeed = STRAIGHT_TURN_SPEED_MPS;
+    }
+    Get_Target_Encoder(
+        StraightTurnCommandSpeed,
+        command_omega);
+}
+
+static void straight_turn_start_arc(uint8_t first_arc)
+{
+    straight_turn_arc_start_yaw =
+        straight_turn_last_valid_yaw;
+    straight_turn_exit_line_error = 0.0f;
+
+    if (first_arc != 0U)
+    {
+        StraightTurnState = STRAIGHT_TURN_ARC_1;
+        TurnCalibration_StartMovingFromYawContinuous(
+            STRAIGHT_TURN_ARC_TARGET_DEG,
+            StraightTurnCommandSpeed,
+            straight_turn_arc_start_yaw,
+            straight_turn_last_imu_sample);
+    }
+    else
+    {
+        StraightTurnState = STRAIGHT_TURN_ARC_2;
+        TurnCalibration_StartMovingFromYaw(
+            STRAIGHT_TURN_ARC_TARGET_DEG,
+            StraightTurnCommandSpeed,
+            straight_turn_arc_start_yaw,
+            straight_turn_last_imu_sample);
+    }
+}
+
+static void straight_turn_run_straight(void)
+{
+    float distance_step;
+    uint8_t first_straight =
+        (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1) ?
+        1U : 0U;
+
+    if (straight_turn_update_imu() == 0U ||
+        straight_turn_update_line() == 0U)
+    {
+        return;
+    }
+
+    distance_step =
+        0.5f * (MotorA.Current_Encoder + MotorB.Current_Encoder) *
+        STRAIGHT_TURN_CONTROL_PERIOD_S;
+    StraightTurnDistanceM +=
+        straight_turn_limit(
+            distance_step,
+            0.0f,
+            STRAIGHT_TURN_MAX_DISTANCE_STEP_M);
+
+    if (StraightTurnDistanceM >= STRAIGHT_TURN_DISTANCE_M)
+    {
+        straight_turn_start_arc(first_straight);
+        return;
+    }
+
+    straight_turn_command_straight();
+}
+
+static void straight_turn_blend_arc_exit(float yaw_magnitude)
+{
+    float blend_start =
+        STRAIGHT_TURN_ARC_TARGET_DEG -
+        STRAIGHT_TURN_ARC_BLEND_DEG;
+    float blend_end =
+        STRAIGHT_TURN_ARC_TARGET_DEG -
+        STRAIGHT_TURN_ARC_STOP_MARGIN_DEG;
+    float blend =
+        straight_turn_limit(
+            (yaw_magnitude - blend_start) /
+                (blend_end - blend_start),
+            0.0f,
+            1.0f);
+    float arc_omega =
+        -TurnCalibrationCommandSpeed /
+        TurnCalibrationRadiusM;
+    float straight_omega =
+        straight_turn_heading_omega(
+            straight_turn_initial_yaw +
+                STRAIGHT_TURN_CLOCKWISE_HEADING_DEG,
+            straight_turn_exit_line_error);
+    float command_omega =
+        (1.0f - blend) * arc_omega +
+        blend * straight_omega;
+
+    Get_Target_Encoder(
+        TurnCalibrationCommandSpeed,
+        command_omega);
+}
+
+static void straight_turn_run_arc(void)
+{
+    uint8_t first_arc =
+        (StraightTurnState == STRAIGHT_TURN_ARC_1) ?
+        1U : 0U;
+    float yaw_magnitude;
+
+    TurnCalibration_Run();
+    StraightTurnCommandSpeed =
+        TurnCalibrationCommandSpeed;
+    if (straight_turn_update_imu() == 0U)
+    {
+        return;
+    }
+
+    yaw_magnitude = fabsf(TurnCalibrationYawDeg);
+    if (first_arc != 0U &&
+        yaw_magnitude >=
+            STRAIGHT_TURN_ARC_TARGET_DEG -
+            STRAIGHT_TURN_ARC_MONITOR_DEG)
+    {
+        straight_turn_monitor_arc_exit();
+        if (yaw_magnitude >=
+            STRAIGHT_TURN_ARC_TARGET_DEG -
+            STRAIGHT_TURN_ARC_BLEND_DEG)
+        {
+            straight_turn_blend_arc_exit(yaw_magnitude);
+        }
+    }
+
+    if (TurnCalibrationState == TURN_CALIBRATION_DONE)
+    {
+        if (first_arc != 0U)
+        {
+            StraightTurnState = STRAIGHT_TURN_STRAIGHT_2;
+            StraightTurnDistanceM = 0.0f;
+            straight_turn_straight_heading_yaw =
+                straight_turn_initial_yaw +
+                STRAIGHT_TURN_CLOCKWISE_HEADING_DEG;
+            straight_turn_filtered_line_error =
+                straight_turn_exit_line_error;
+            straight_turn_line_lost_ticks = 0U;
+            straight_turn_command_straight();
+        }
+        else
+        {
+            StraightTurnState = STRAIGHT_TURN_DONE;
+        }
+    }
+    else if (TurnCalibrationState == TURN_CALIBRATION_FAULT)
+    {
+        straight_turn_fault(STRAIGHT_TURN_FAULT_ARC);
+    }
+}
+
 void StraightTurnTest_Reset(void)
 {
     StraightTurnState = STRAIGHT_TURN_IDLE;
@@ -90,8 +365,12 @@ void StraightTurnTest_Reset(void)
     StraightTurnHeadingErrorDeg = 0.0f;
     StraightTurnCommandSpeed = 0.0f;
     StraightTurnElapsedMs = 0U;
-    straight_turn_start_yaw = 0.0f;
+    straight_turn_initial_yaw = 0.0f;
+    straight_turn_straight_heading_yaw = 0.0f;
+    straight_turn_arc_start_yaw = 0.0f;
+    straight_turn_last_valid_yaw = 0.0f;
     straight_turn_filtered_line_error = 0.0f;
+    straight_turn_exit_line_error = 0.0f;
     straight_turn_gyro_z_dps = 0.0f;
     straight_turn_last_imu_sample = 0U;
     straight_turn_imu_stale_ticks = 0U;
@@ -114,9 +393,13 @@ void StraightTurnTest_Start(void)
         return;
     }
 
-    straight_turn_start_yaw = sample.yaw_continuous_deg;
+    straight_turn_initial_yaw = sample.yaw_continuous_deg;
+    straight_turn_straight_heading_yaw =
+        straight_turn_initial_yaw;
+    straight_turn_last_valid_yaw = sample.yaw_continuous_deg;
+    straight_turn_gyro_z_dps = sample.gyro_z_dps;
     straight_turn_last_imu_sample = sample.sample_count;
-    StraightTurnState = STRAIGHT_TURN_STRAIGHT;
+    StraightTurnState = STRAIGHT_TURN_STRAIGHT_1;
     Flag_Stop = 0U;
 }
 
@@ -132,96 +415,12 @@ void StraightTurnTest_Stop(void)
 
 void StraightTurnTest_Run(void)
 {
-    imu_sample_t sample;
-    float line_error;
-    float target_heading_deg;
-    float command_omega;
-    float distance_step;
-    float speed_step;
-    uint8_t line_valid;
-
-    if (StraightTurnState == STRAIGHT_TURN_ARC)
+    if (StraightTurnState == STRAIGHT_TURN_IDLE ||
+        StraightTurnState == STRAIGHT_TURN_DONE ||
+        StraightTurnState == STRAIGHT_TURN_FAULT)
     {
-        TurnCalibration_Run();
-        StraightTurnYawDeg = TurnCalibrationYawDeg;
-        StraightTurnCommandSpeed =
-            TurnCalibrationCommandSpeed;
-        StraightTurnElapsedMs =
-            (uint32_t)straight_turn_elapsed_ticks * 5U +
-            TurnCalibrationElapsedMs;
-
-        if (TurnCalibrationState == TURN_CALIBRATION_DONE)
-        {
-            StraightTurnState = STRAIGHT_TURN_DONE;
-        }
-        else if (TurnCalibrationState ==
-                 TURN_CALIBRATION_FAULT)
-        {
-            StraightTurnFault = STRAIGHT_TURN_FAULT_ARC;
-            StraightTurnState = STRAIGHT_TURN_FAULT;
-        }
         return;
     }
-
-    if (StraightTurnState != STRAIGHT_TURN_STRAIGHT)
-    {
-        MotorA.Target_Encoder = 0.0f;
-        MotorB.Target_Encoder = 0.0f;
-        return;
-    }
-
-    imu_get_snapshot(&sample);
-    if (sample.status == IMU_STATUS_READY &&
-        sample.valid != 0U &&
-        sample.sample_count != straight_turn_last_imu_sample)
-    {
-        straight_turn_last_imu_sample = sample.sample_count;
-        straight_turn_imu_stale_ticks = 0U;
-        StraightTurnYawDeg =
-            sample.yaw_continuous_deg - straight_turn_start_yaw;
-        straight_turn_gyro_z_dps = sample.gyro_z_dps;
-    }
-    else if (straight_turn_imu_stale_ticks <
-             STRAIGHT_TURN_IMU_STALE_TICKS)
-    {
-        straight_turn_imu_stale_ticks++;
-    }
-    else
-    {
-        straight_turn_fault(
-            STRAIGHT_TURN_FAULT_IMU_STALE);
-        return;
-    }
-
-    line_valid = IR_ReadLineErrorFour(&line_error);
-    if (line_valid != 0U)
-    {
-        straight_turn_line_lost_ticks = 0U;
-        straight_turn_filtered_line_error +=
-            STRAIGHT_TURN_LINE_FILTER_GAIN *
-            (line_error - straight_turn_filtered_line_error);
-    }
-    else if (straight_turn_line_lost_ticks <
-             STRAIGHT_TURN_LINE_LOST_TICKS)
-    {
-        straight_turn_line_lost_ticks++;
-        straight_turn_filtered_line_error *= 0.98f;
-    }
-    else
-    {
-        straight_turn_fault(STRAIGHT_TURN_FAULT_LINE_LOST);
-        return;
-    }
-    StraightTurnLineError = straight_turn_filtered_line_error;
-
-    distance_step =
-        0.5f * (MotorA.Current_Encoder + MotorB.Current_Encoder) *
-        STRAIGHT_TURN_CONTROL_PERIOD_S;
-    StraightTurnDistanceM +=
-        straight_turn_limit(
-            distance_step,
-            0.0f,
-            STRAIGHT_TURN_MAX_DISTANCE_STEP_M);
 
     straight_turn_elapsed_ticks++;
     StraightTurnElapsedMs =
@@ -233,53 +432,13 @@ void StraightTurnTest_Run(void)
         return;
     }
 
-    if (StraightTurnDistanceM >= STRAIGHT_TURN_DISTANCE_M)
+    if (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1 ||
+        StraightTurnState == STRAIGHT_TURN_STRAIGHT_2)
     {
-        StraightTurnState = STRAIGHT_TURN_ARC;
-        TurnCalibration_StartMovingFromYaw(
-            STRAIGHT_TURN_ARC_TARGET_DEG,
-            StraightTurnCommandSpeed,
-            straight_turn_start_yaw + StraightTurnYawDeg,
-            straight_turn_last_imu_sample);
-        return;
-    }
-
-    target_heading_deg =
-        straight_turn_start_yaw +
-        straight_turn_limit(
-            STRAIGHT_TURN_LINE_HEADING_GAIN_DEG *
-                StraightTurnLineError,
-            -STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG,
-            STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG);
-    StraightTurnHeadingErrorDeg =
-        straight_turn_wrap_180(
-            target_heading_deg -
-            (straight_turn_start_yaw + StraightTurnYawDeg));
-    command_omega =
-        STRAIGHT_TURN_HEADING_KP *
-            StraightTurnHeadingErrorDeg -
-        STRAIGHT_TURN_GYRO_KD *
-            straight_turn_gyro_z_dps;
-    command_omega =
-        straight_turn_limit(
-            command_omega,
-            -STRAIGHT_TURN_MAX_OMEGA_RAD_S,
-            STRAIGHT_TURN_MAX_OMEGA_RAD_S);
-
-    speed_step =
-        STRAIGHT_TURN_ACCELERATION_MPS2 *
-        STRAIGHT_TURN_CONTROL_PERIOD_S;
-    if (StraightTurnCommandSpeed <
-        STRAIGHT_TURN_SPEED_MPS - speed_step)
-    {
-        StraightTurnCommandSpeed += speed_step;
+        straight_turn_run_straight();
     }
     else
     {
-        StraightTurnCommandSpeed =
-            STRAIGHT_TURN_SPEED_MPS;
+        straight_turn_run_arc();
     }
-    Get_Target_Encoder(
-        StraightTurnCommandSpeed,
-        command_omega);
 }

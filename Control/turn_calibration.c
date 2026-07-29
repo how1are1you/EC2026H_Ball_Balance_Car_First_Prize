@@ -36,6 +36,7 @@ static float turn_calibration_start_yaw;
 static uint32_t turn_calibration_last_sample_count;
 static uint16_t turn_calibration_elapsed_ticks;
 static uint16_t turn_calibration_imu_stale_ticks;
+static uint8_t turn_calibration_stop_on_complete;
 
 static float turn_calibration_limit(
     float value,
@@ -79,6 +80,7 @@ void TurnCalibration_Reset(void)
     turn_calibration_last_sample_count = 0U;
     turn_calibration_elapsed_ticks = 0U;
     turn_calibration_imu_stale_ticks = 0U;
+    turn_calibration_stop_on_complete = 1U;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
 }
@@ -141,6 +143,20 @@ void TurnCalibration_StartMovingFromYaw(
             TURN_CALIBRATION_SPEED_MPS);
     TurnCalibrationState = TURN_CALIBRATION_RUNNING;
     Flag_Stop = 0U;
+}
+
+void TurnCalibration_StartMovingFromYawContinuous(
+    float target_yaw_deg,
+    float initial_speed_mps,
+    float start_yaw_deg,
+    uint32_t last_sample_count)
+{
+    TurnCalibration_StartMovingFromYaw(
+        target_yaw_deg,
+        initial_speed_mps,
+        start_yaw_deg,
+        last_sample_count);
+    turn_calibration_stop_on_complete = 0U;
 }
 
 void TurnCalibration_Stop(void)
@@ -229,11 +245,14 @@ void TurnCalibration_Run(void)
         TurnCalibrationTargetYawDeg -
             TURN_CALIBRATION_STOP_MARGIN_DEG)
     {
-        TurnCalibrationCommandSpeed = 0.0f;
-        MotorA.Target_Encoder = 0.0f;
-        MotorB.Target_Encoder = 0.0f;
         TurnCalibrationState = TURN_CALIBRATION_DONE;
-        Flag_Stop = 1U;
+        if (turn_calibration_stop_on_complete != 0U)
+        {
+            TurnCalibrationCommandSpeed = 0.0f;
+            MotorA.Target_Encoder = 0.0f;
+            MotorB.Target_Encoder = 0.0f;
+            Flag_Stop = 1U;
+        }
         return;
     }
 
@@ -255,13 +274,16 @@ void TurnCalibration_Run(void)
     remaining_arc_m =
         TurnCalibrationRadiusM * remaining_angle_rad;
     desired_speed = TURN_CALIBRATION_SPEED_MPS;
-    braking_speed = sqrtf(
-        2.0f * TURN_CALIBRATION_DECELERATION_MPS2 *
-        remaining_arc_m);
-    if (braking_speed < desired_speed)
+    if (turn_calibration_stop_on_complete != 0U)
     {
-        desired_speed = braking_speed;
-        TurnCalibrationState = TURN_CALIBRATION_BRAKING;
+        braking_speed = sqrtf(
+            2.0f * TURN_CALIBRATION_DECELERATION_MPS2 *
+            remaining_arc_m);
+        if (braking_speed < desired_speed)
+        {
+            desired_speed = braking_speed;
+            TurnCalibrationState = TURN_CALIBRATION_BRAKING;
+        }
     }
 
     speed_step =

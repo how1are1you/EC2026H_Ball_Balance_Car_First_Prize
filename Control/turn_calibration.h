@@ -42,6 +42,11 @@ void TurnCalibration_StartMovingFromYaw(
     float initial_speed_mps,
     float start_yaw_deg,
     uint32_t last_sample_count);
+void TurnCalibration_StartMovingFromYawContinuous(
+    float target_yaw_deg,
+    float initial_speed_mps,
+    float start_yaw_deg,
+    uint32_t last_sample_count);
 void TurnCalibration_Stop(void);
 void TurnCalibration_Reset(void);
 void TurnCalibration_IncreaseRadius(void);
