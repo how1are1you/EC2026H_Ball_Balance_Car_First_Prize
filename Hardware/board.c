@@ -11,9 +11,9 @@ volatile uint32_t start_time;
 int fputc(int ch, FILE *stream)
 {
 	//当串口0忙的时候等待，不忙的时候再发送传进来的字符
-	while( DL_UART_isBusy(UART_1_INST) == true );
+	while( DL_UART_isBusy(UART_0_INST) == true );
 
-	DL_UART_Main_transmitDataBlocking(UART_1_INST, ch);
+	DL_UART_Main_transmitDataBlocking(UART_0_INST, ch);
 
 	return ch;
 }
@@ -24,7 +24,7 @@ int fputs(const char* restrict s,FILE* restrict stream)
    len = strlen(s);
    for(i=0;i<len;i++)
    {
-       DL_UART_Main_transmitDataBlocking(UART_1_INST,s[i]);
+       DL_UART_Main_transmitDataBlocking(UART_0_INST,s[i]);
    }
    return len;
 }
@@ -90,6 +90,5 @@ void delay_us(uint32_t us)
 
 void delay_1us(unsigned long __us){ delay_us(__us); }
 void delay_1ms(unsigned long ms){ delay_ms(ms); }
-
 
 

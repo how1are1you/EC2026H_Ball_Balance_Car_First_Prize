@@ -27,7 +27,8 @@ All rights reserved
 #define RUN_MODE_TURN_CAL     3
 #define RUN_MODE_STRAIGHT_TURN 4
 #define RUN_MODE_BALL_LAP     5
-#define RUN_MODE_COUNT        6
+#define RUN_MODE_UART_DEBUG   6
+#define RUN_MODE_COUNT        7
 #define RUN_MODE_MENU_DEFAULT RUN_MODE_STRAIGHT_TURN
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
@@ -79,7 +80,6 @@ void Get_Motor_PWM(void);
 void Set_Pwm(int motor_a,int motor_b);
 int Turn_Off(void);
 int myabs(int a);
-void Get_RC(void);
 void Key(void);
 float target_limit_float(float insert,float low,float high);
 int target_limit_int(int insert,int low,int high);

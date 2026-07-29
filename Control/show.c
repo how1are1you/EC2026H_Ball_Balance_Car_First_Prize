@@ -22,6 +22,9 @@ All rights reserved
 #include "imu/imu.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
+#include "uart_callback.h"
+
+#define VISION_UART_LIVE_TIMEOUT_MS (500UL)
 /**************************************************************************
 Function: OLED display
 Input   : none
@@ -148,6 +151,63 @@ static uint8_t imu_show_signed_millidegrees(
     OLED_ShowChar((uint8_t)(decimal_x + 18U), y,
                   (uint8_t)('0' + fraction % 10U), 12, 1);
     return (uint8_t)(decimal_x + 24U);
+}
+
+static uint8_t vision_show_position_mm(
+    uint8_t x,
+    uint8_t y,
+    float value)
+{
+    int32_t scaled;
+    uint32_t magnitude;
+    uint32_t whole;
+    uint32_t fraction;
+    uint8_t digits;
+    uint8_t number_x;
+    uint8_t decimal_x;
+
+    if (value > 9999.99f)
+    {
+        value = 9999.99f;
+    }
+    else if (value < -9999.99f)
+    {
+        value = -9999.99f;
+    }
+
+    scaled = (int32_t)(value * 100.0f +
+                       ((value >= 0.0f) ? 0.5f : -0.5f));
+    if (scaled < 0)
+    {
+        OLED_ShowChar(x, y, '-', 12, 1);
+        magnitude = (uint32_t)(-scaled);
+    }
+    else
+    {
+        OLED_ShowChar(x, y, '+', 12, 1);
+        magnitude = (uint32_t)scaled;
+    }
+
+    whole = magnitude / 100U;
+    fraction = magnitude % 100U;
+    digits = imu_unsigned_digits(whole);
+    number_x = (uint8_t)(x + 6U);
+    decimal_x = (uint8_t)(number_x + digits * 6U);
+    OLED_ShowNumber(number_x, y, whole, digits, 12);
+    OLED_ShowChar(decimal_x, y, '.', 12, 1);
+    OLED_ShowChar(
+        (uint8_t)(decimal_x + 6U),
+        y,
+        (uint8_t)('0' + fraction / 10U),
+        12,
+        1);
+    OLED_ShowChar(
+        (uint8_t)(decimal_x + 12U),
+        y,
+        (uint8_t)('0' + fraction % 10U),
+        12,
+        1);
+    return (uint8_t)(decimal_x + 18U);
 }
 
 static void imu_debug_oled_show(void)
@@ -441,6 +501,71 @@ static void straight_turn_oled_show(void)
     OLED_Refresh_Gram();
 }
 
+static void vision_uart_oled_show(void)
+{
+    float position_mm = vision_ball_position_mm;
+    uint32_t frame_count = vision_ball_frame_count;
+    uint32_t error_count = vision_uart_error_count;
+    uint32_t age_ms =
+        (uint32_t)((uint32_t)tick_ms - vision_ball_last_update_ms);
+    uint8_t valid = vision_ball_position_valid;
+    uint8_t position_end_x;
+    const char *status_text;
+
+    if (valid == 0U)
+    {
+        status_text = "WAIT";
+    }
+    else if (age_ms <= VISION_UART_LIVE_TIMEOUT_MS)
+    {
+        status_text = "LIVE";
+    }
+    else
+    {
+        status_text = "STALE";
+    }
+
+    if (age_ms > 99999U)
+    {
+        age_ms = 99999U;
+    }
+
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(0, 0, "UART1 RX:");
+    oled_show_text(60, 0, status_text);
+
+    oled_show_text(0, 10, "POS:");
+    if (valid != 0U)
+    {
+        position_end_x = vision_show_position_mm(30, 10, position_mm);
+        oled_show_text((uint8_t)(position_end_x + 4U), 10, "mm");
+    }
+    else
+    {
+        oled_show_text(30, 10, "--");
+    }
+
+    oled_show_text(0, 20, "FRAME:");
+    OLED_ShowNumber(42, 20, frame_count % 100000000U, 8, 12);
+
+    oled_show_text(0, 30, "ERROR:");
+    OLED_ShowNumber(42, 30, error_count % 100000000U, 8, 12);
+
+    oled_show_text(0, 40, "AGE:");
+    if (valid != 0U)
+    {
+        OLED_ShowNumber(30, 40, age_ms, 5, 12);
+        oled_show_text(66, 40, "ms");
+    }
+    else
+    {
+        oled_show_text(30, 40, "--");
+    }
+
+    oled_show_text(0, 50, "HOLD KEY:MENU");
+    OLED_Refresh_Gram();
+}
+
 static void menu_show_item(
     uint8_t y,
     uint8_t mode,
@@ -477,10 +602,10 @@ static void menu_oled_show(void)
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
 
     oled_show_text(0, 0, "SELECT MODE");
-    menu_show_item(20, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
-    menu_show_item(30, RUN_MODE_BALL_LAP, "BALL LAP");
+    menu_show_item(16, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
+    menu_show_item(28, RUN_MODE_BALL_LAP, "BALL LAP");
     menu_show_item(40, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
-    oled_show_voltage(50);
+    menu_show_item(52, RUN_MODE_UART_DEBUG, "UART RX");
 
     OLED_Refresh_Gram();
 }
@@ -508,6 +633,11 @@ void oled_show(void)
     if (Run_Mode == RUN_MODE_IMU_DEBUG)
     {
         imu_debug_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_UART_DEBUG)
+    {
+        vision_uart_oled_show();
         return;
     }
     if (Run_Mode == RUN_MODE_TURN_CAL)
@@ -599,7 +729,8 @@ void APP_Show(void)
         Run_Mode == RUN_MODE_IMU_DEBUG ||
         Run_Mode == RUN_MODE_TURN_CAL ||
         Run_Mode == RUN_MODE_STRAIGHT_TURN ||
-        Run_Mode == RUN_MODE_BALL_LAP)
+        Run_Mode == RUN_MODE_BALL_LAP ||
+        Run_Mode == RUN_MODE_UART_DEBUG)
     {
         return;
     }

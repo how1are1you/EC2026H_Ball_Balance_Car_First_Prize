@@ -72,6 +72,7 @@ int main(void)
 
     // 系统初始化
     SYSCFG_DL_init(); // 初始化系统配置
+    vision_uart_reset();
     // 清除所有外设的中断挂起状态
     NVIC_ClearPendingIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN); // 编码器A与MPU6050中断
     NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);            // 编码器B中断
@@ -99,8 +100,6 @@ int main(void)
     {
         imu_service();
         Voltage = Get_battery_volt(); // 采样小车当前电压
-        BTBufferHandler();            // 处理蓝牙数据缓冲区
         oled_show();                  //  OLED显示更新
-        APP_Show();                   //  APP显示处理
     }
 }

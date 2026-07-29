@@ -167,7 +167,6 @@ GPIO14.$name                              = "MPU6050_INT";
 GPIO14.port                               = "PORTA";
 GPIO14.associatedPins[0].$name            = "INT_PIN";
 GPIO14.associatedPins[0].direction        = "INPUT";
-GPIO14.associatedPins[0].assignedPort     = "PORTA";
 GPIO14.associatedPins[0].assignedPin      = "7";
 GPIO14.associatedPins[0].internalResistor = "PULL_UP";
 GPIO14.associatedPins[0].interruptEn      = true;
@@ -231,40 +230,38 @@ UART1.peripheral.txPin.$assign = "PA10";
 UART1.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric2";
 UART1.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric3";
 
-UART2.$name                      = "UART_1";
-UART2.enabledInterrupts          = ["DMA_DONE_RX"];
-UART2.interruptPriority          = "1";
-UART2.enabledDMARXTriggers       = "DL_UART_DMA_INTERRUPT_RX";
-UART2.peripheral.$assign         = "UART1";
-UART2.peripheral.rxPin.$assign   = "PB7";
-UART2.peripheral.txPin.$assign   = "PB6";
-UART2.txPinConfig.$name          = "ti_driverlib_gpio_GPIOPinGeneric6";
-UART2.rxPinConfig.$name          = "ti_driverlib_gpio_GPIOPinGeneric7";
-UART2.DMA_CHANNEL_RX.$name       = "DMA_CH0";
-UART2.DMA_CHANNEL_RX.addressMode = "f2b";
-UART2.DMA_CHANNEL_RX.srcLength   = "BYTE";
-UART2.DMA_CHANNEL_RX.dstLength   = "BYTE";
+UART2.$name                    = "UART_1";
+UART2.targetBaudRate           = 115200;
+UART2.enableFIFO               = true;
+UART2.rxFifoThreshold          = "DL_UART_RX_FIFO_LEVEL_ONE_ENTRY";
+UART2.enableInternalLoopback   = false;
+UART2.enabledInterrupts        = ["RX","OVERRUN_ERROR","BREAK_ERROR","PARITY_ERROR","FRAMING_ERROR","NOISE_ERROR"];
+UART2.interruptPriority        = "1";
+UART2.peripheral.$assign       = "UART1";
+UART2.peripheral.rxPin.$assign = "PB7";
+UART2.peripheral.txPin.$assign = "PB6";
+UART2.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric6";
+UART2.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric7";
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
  * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
  * re-solve from scratch.
  */
-ADC121.peripheral.$suggestSolution               = "ADC1";
-ADC121.peripheral.adcPin0.$suggestSolution       = "PA15";
-Board.peripheral.$suggestSolution                = "DEBUGSS";
-Board.peripheral.swclkPin.$suggestSolution       = "PA20";
-Board.peripheral.swdioPin.$suggestSolution       = "PA19";
-GPIO11.associatedPins[0].pin.$suggestSolution    = "PA22";
-GPIO12.associatedPins[0].pin.$suggestSolution    = "PA9";
-GPIO13.associatedPins[0].pin.$suggestSolution    = "PA27";
-GPIO13.associatedPins[1].pin.$suggestSolution    = "PA12";
-GPIO13.associatedPins[2].pin.$suggestSolution    = "PB16";
-GPIO13.associatedPins[3].pin.$suggestSolution    = "PB17";
-GPIO14.associatedPins[0].pin.$suggestSolution    = "PA7";
-I2C1.peripheral.$suggestSolution                 = "I2C0";
-I2C1.peripheral.sdaPin.$suggestSolution          = "PA0";
-I2C1.peripheral.sclPin.$suggestSolution          = "PA1";
-PWM2.peripheral.$suggestSolution                 = "TIMA0";
-UART1.peripheral.$suggestSolution                = "UART0";
-UART2.DMA_CHANNEL_RX.peripheral.$suggestSolution = "DMA_CH0";
+ADC121.peripheral.$suggestSolution            = "ADC1";
+ADC121.peripheral.adcPin0.$suggestSolution    = "PA15";
+Board.peripheral.$suggestSolution             = "DEBUGSS";
+Board.peripheral.swclkPin.$suggestSolution    = "PA20";
+Board.peripheral.swdioPin.$suggestSolution    = "PA19";
+GPIO11.associatedPins[0].pin.$suggestSolution = "PA22";
+GPIO12.associatedPins[0].pin.$suggestSolution = "PA9";
+GPIO13.associatedPins[0].pin.$suggestSolution = "PA27";
+GPIO13.associatedPins[1].pin.$suggestSolution = "PA12";
+GPIO13.associatedPins[2].pin.$suggestSolution = "PB16";
+GPIO13.associatedPins[3].pin.$suggestSolution = "PB17";
+GPIO14.associatedPins[0].pin.$suggestSolution = "PA7";
+I2C1.peripheral.$suggestSolution              = "I2C0";
+I2C1.peripheral.sdaPin.$suggestSolution       = "PA0";
+I2C1.peripheral.sclPin.$suggestSolution       = "PA1";
+PWM2.peripheral.$suggestSolution              = "TIMA0";
+UART1.peripheral.$suggestSolution             = "UART0";
