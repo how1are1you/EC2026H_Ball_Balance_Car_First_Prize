@@ -62,7 +62,7 @@ volatile float LF04_SteeringError;
 volatile float LF04_CommandSpeed;
 volatile uint32_t LF04_LapElapsedMs;
 
-static float LF04_LastNonzeroError = -1.0f;
+static float LF04_LastNonzeroError = 1.0f;
 static float LF04_LastError;
 static float LF04_ErrorDerivative;
 static float LF04_ErrorIntegral;
@@ -113,10 +113,10 @@ uint8_t IR_ReadLineErrorFour(float *error)
      * controller: DH1/DH2 are on one side and DH3/DH4 on the other.
      */
     weighted_sum =
-        2.0f * (float)LF04_DH1_State +
-        1.0f * (float)LF04_DH2_State -
-        1.0f * (float)LF04_DH3_State -
-        2.0f * (float)LF04_DH4_State;
+        3.0f * (float)LF04_DH1_State +
+        1.8f * (float)LF04_DH2_State -
+        1.8f * (float)LF04_DH3_State -
+        3.0f * (float)LF04_DH4_State;
     *error = LF04_SteeringSign *
              weighted_sum / (float)active_count;
     return 1U;
@@ -281,42 +281,22 @@ static float LF04_ReadSteeringError(void)
 {
     float error;
 
-    LF04_DH1_State = 0U;
-    LF04_DH4_State = 0U;
-    LF04_DH2_State = LF04_IsBlack(
-        DL_GPIO_readPins(LF04_DH2_PORT, LF04_DH2_PIN));
-    LF04_DH3_State = LF04_IsBlack(
-        DL_GPIO_readPins(LF04_DH3_PORT, LF04_DH3_PIN));
-    LF04_State =
-        (uint8_t)((LF04_DH2_State << 1U) | LF04_DH3_State);
-
-    if (LF04_State == 0x03U)
+    if (IR_ReadLineErrorFour(&error) != 0U)
     {
-        error = 0.0f;
         LF04_LineLostTicks = 0U;
-    }
-    else if (LF04_State == 0x02U)
-    {
-        error = 1.0f;
-        LF04_LastNonzeroError = error;
-        LF04_LineLostTicks = 0U;
-    }
-    else if (LF04_State == 0x01U)
-    {
-        error = -1.0f;
-        LF04_LastNonzeroError = error;
-        LF04_LineLostTicks = 0U;
-    }
-    else
-    {
-        error = 1.5f * LF04_LastNonzeroError;
-        if (LF04_LineLostTicks < LF04_LINE_LOST_TIMEOUT_TICKS)
+        if (fabsf(error) > 0.001f)
         {
-            LF04_LineLostTicks++;
+            LF04_LastNonzeroError = error;
         }
+        return error;
     }
 
-    return LF04_SteeringSign * error;
+    error = 1.5f * LF04_LastNonzeroError;
+    if (LF04_LineLostTicks < LF04_LINE_LOST_TIMEOUT_TICKS)
+    {
+        LF04_LineLostTicks++;
+    }
+    return error;
 }
 
 void IR_Differential_OneLap(void)
@@ -504,7 +484,7 @@ void IR_Differential_OneLap_Reset(void)
     LF04_SteeringError = 0.0f;
     LF04_CommandSpeed = 0.0f;
     LF04_LapElapsedMs = 0U;
-    LF04_LastNonzeroError = -1.0f;
+    LF04_LastNonzeroError = -LF04_SteeringSign;
     LF04_LastError = 0.0f;
     LF04_ErrorDerivative = 0.0f;
     LF04_ErrorIntegral = 0.0f;

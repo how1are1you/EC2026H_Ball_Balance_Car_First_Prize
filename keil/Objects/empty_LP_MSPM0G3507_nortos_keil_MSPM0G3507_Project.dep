@@ -1602,8 +1602,8 @@ I (..\Control\control.h)(0x6A6A1BD9)
 I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6A6A1A0D)
 I (..\Hardware\CCD.h)(0x6A696CB1)
-F (..\Hardware\IR_Module.c)(0x6A69D61E)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/ir_module.o -MMD)
-I (..\Hardware\IR_Module.h)(0x6A69D61E)
+F (..\Hardware\IR_Module.c)(0x6A6A35FB)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/ir_module.o -MMD)
+I (..\Hardware\IR_Module.h)(0x6A6A35FB)
 I (..\Control\control.h)(0x6A6A1BD9)
 I (..\Hardware\board.h)(0x6A696CB1)
 I (..\..\WHEELTEC_C07A_R3XAkm\ti_msp_dl_config.h)(0x6A6A25C6)
@@ -1941,7 +1941,7 @@ I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6A6A1A0D)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
-I (..\Hardware\IR_Module.h)(0x6A69D61E)
+I (..\Hardware\IR_Module.h)(0x6A6A35FB)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
 I (..\Control\ball_balance.h)(0x6A6A2675)
 I (..\Hardware\servo.h)(0x6A6A2675)
@@ -2033,7 +2033,7 @@ I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6A6A1A0D)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
-I (..\Hardware\IR_Module.h)(0x6A69D61E)
+I (..\Hardware\IR_Module.h)(0x6A6A35FB)
 I (..\Control\ball_balance.h)(0x6A6A2675)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
 I (..\Control\straight_turn_test.h)(0x6A6A0155)
@@ -2291,7 +2291,7 @@ I (..\Control\uart_callback.h)(0x6A6A1A0D)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
-F (..\Control\straight_turn_test.c)(0x6A6A2E29)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/straight_turn_test.o -MMD)
+F (..\Control\straight_turn_test.c)(0x6A6A33C5)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m0plus -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -gdwarf-4 -O0 -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../source -I ../source/third_party/CMSIS/Core/Include -I ../Hardware -I ../../WHEELTEC_C07A_R3XAkm -I ../Control-D__UVISION_VERSION="543" -D__MSPM0G3507__ -D__MSPM0G3507__ -DMPU6050 -DMOTION_DRIVER_TARGET_MSPM0-o ./objects/straight_turn_test.o -MMD)
 I (..\Control\straight_turn_test.h)(0x6A6A0155)
 I (..\Control\control.h)(0x6A6A1BD9)
 I (..\Hardware\board.h)(0x6A696CB1)
@@ -2378,6 +2378,6 @@ I (..\Control\DataScope_DP.h)(0x6A696CB1)
 I (..\Control\uart_callback.h)(0x6A6A1A0D)
 I (..\Hardware\CCD.h)(0x6A696CB1)
 I (..\Hardware\adc.h)(0x6847F1DA)
-I (..\Hardware\IR_Module.h)(0x6A69D61E)
+I (..\Hardware\IR_Module.h)(0x6A6A35FB)
 I (..\Hardware\imu\imu.h)(0x6A69A4AC)
 I (..\Control\turn_calibration.h)(0x6A6A2E1E)

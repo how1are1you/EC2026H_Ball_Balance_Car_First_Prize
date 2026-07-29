@@ -10,7 +10,8 @@ extern uint8_t LF04_DH4_State;
 extern uint8_t LF04_State;
 
 /*
- * The lap controller only reads DH2 (left-middle) and DH3 (right-middle).
+ * The lap controller reads all four channels. DH1/DH4 are the outer sensors
+ * with a 3.0 steering weight; the inner DH2/DH3 sensors use 1.8.
  * Set this to 0 only if a black line is reported as a logic-low input.
  */
 extern uint8_t LF04_BlackActiveHigh;

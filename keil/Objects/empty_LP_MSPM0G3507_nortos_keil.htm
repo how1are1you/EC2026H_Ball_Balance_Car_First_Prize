@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\empty_LP_MSPM0G3507_nortos_keil.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\empty_LP_MSPM0G3507_nortos_keil.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6240002: Last Updated: Thu Jul 30 00:45:34 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6240002: Last Updated: Thu Jul 30 01:19:32 2026
 <BR><P>
 <H3>Maximum Stack Usage =        720 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -241,8 +241,8 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[153]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_service
 <LI><a href="#[156]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_wrap_180
-<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_Differential_OneLap
 <LI><a href="#[29]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fsub
+<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_Differential_OneLap
 <LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_ReadLineErrorFour
 <LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_SmoothStep
 <LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_CurveBlend
@@ -283,7 +283,6 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[153]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_service
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_Differential_OneLap
-<LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_ReadLineErrorFour
 <LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_SmoothStep
 <LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_CurveBlend
 <LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_DriveAxleCurveRadius
@@ -382,6 +381,7 @@ Global Symbols
 <LI><a href="#[156]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_wrap_180
 <LI><a href="#[13e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_clamp_unit
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_Differential_OneLap
+<LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_ReadSteeringError
 <LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_LimitFloat
 <LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;straight_turn_wrap_180
 <LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;straight_turn_limit
@@ -853,8 +853,8 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmple
 <LI><a href="#[7b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmplt
 <LI><a href="#[7a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmpge
-<LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmpgt
 <LI><a href="#[29]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fsub
+<LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmpgt
 <LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
 <LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_CourseCurvature
 <LI><a href="#[7e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_UpdateCourseState
@@ -870,23 +870,23 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[13]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMG0_IRQHandler
 </UL>
 
-<P><STRONG><a name="[89]"></a>IR_Differential_OneLap_Reset</STRONG> (Thumb, 112 bytes, Stack size 0 bytes, ir_module.o(.text.IR_Differential_OneLap_Reset))
+<P><STRONG><a name="[89]"></a>IR_Differential_OneLap_Reset</STRONG> (Thumb, 120 bytes, Stack size 0 bytes, ir_module.o(.text.IR_Differential_OneLap_Reset))
 <BR><BR>[Called By]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Key
 <LI><a href="#[13]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIMG0_IRQHandler
 </UL>
 
-<P><STRONG><a name="[80]"></a>IR_ReadLineErrorFour</STRONG> (Thumb, 292 bytes, Stack size 80 bytes, ir_module.o(.text.IR_ReadLineErrorFour))
-<BR><BR>[Stack]<UL><LI>Max Depth = 116<LI>Call Chain = IR_ReadLineErrorFour &rArr; __aeabi_fsub &rArr; __aeabi_fadd &rArr; _float_epilogue
+<P><STRONG><a name="[80]"></a>IR_ReadLineErrorFour</STRONG> (Thumb, 300 bytes, Stack size 80 bytes, ir_module.o(.text.IR_ReadLineErrorFour))
+<BR><BR>[Stack]<UL><LI>Max Depth = 116<LI>Call Chain = IR_ReadLineErrorFour &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
-<BR>[Calls]<UL><LI><a href="#[29]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fsub
-<LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
+<BR>[Calls]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_IsBlack
 <LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DL_GPIO_readPins
 <LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fmul
 <LI><a href="#[2b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fdiv
 <LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ui2f
 </UL>
-<BR>[Called By]<UL><LI><a href="#[17b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;straight_turn_monitor_arc_exit
+<BR>[Called By]<UL><LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_ReadSteeringError
+<LI><a href="#[17b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;straight_turn_monitor_arc_exit
 <LI><a href="#[180]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;straight_turn_update_line
 </UL>
 
@@ -2903,14 +2903,12 @@ Local Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = DL_GPIO_readPins
 </UL>
 <BR>[Called By]<UL><LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_ReadLineErrorFour
-<LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_ReadSteeringError
 </UL>
 
 <P><STRONG><a name="[82]"></a>LF04_IsBlack</STRONG> (Thumb, 52 bytes, Stack size 12 bytes, ir_module.o(.text.LF04_IsBlack))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = LF04_IsBlack
 </UL>
 <BR>[Called By]<UL><LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_ReadLineErrorFour
-<LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_ReadSteeringError
 </UL>
 
 <P><STRONG><a name="[74]"></a>LF04_StartRun</STRONG> (Thumb, 72 bytes, Stack size 80 bytes, ir_module.o(.text.LF04_StartRun))
@@ -2947,11 +2945,11 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_Differential_OneLap
 </UL>
 
-<P><STRONG><a name="[79]"></a>LF04_ReadSteeringError</STRONG> (Thumb, 204 bytes, Stack size 24 bytes, ir_module.o(.text.LF04_ReadSteeringError))
-<BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = LF04_ReadSteeringError &rArr; __aeabi_fmul
+<P><STRONG><a name="[79]"></a>LF04_ReadSteeringError</STRONG> (Thumb, 104 bytes, Stack size 16 bytes, ir_module.o(.text.LF04_ReadSteeringError))
+<BR><BR>[Stack]<UL><LI>Max Depth = 132<LI>Call Chain = LF04_ReadSteeringError &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
-<BR>[Calls]<UL><LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LF04_IsBlack
-<LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DL_GPIO_readPins
+<BR>[Calls]<UL><LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmple
+<LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_ReadLineErrorFour
 <LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fmul
 </UL>
 <BR>[Called By]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;IR_Differential_OneLap
@@ -3616,7 +3614,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[f2]"></a>straight_turn_run_straight</STRONG> (Thumb, 136 bytes, Stack size 24 bytes, straight_turn_test.o(.text.straight_turn_run_straight))
-<BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = straight_turn_run_straight &rArr; straight_turn_update_line &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fsub &rArr; __aeabi_fadd &rArr; _float_epilogue
+<BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = straight_turn_run_straight &rArr; straight_turn_update_line &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[7b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmplt
 <LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
@@ -3657,7 +3655,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[180]"></a>straight_turn_update_line</STRONG> (Thumb, 132 bytes, Stack size 32 bytes, straight_turn_test.o(.text.straight_turn_update_line))
-<BR><BR>[Stack]<UL><LI>Max Depth = 148<LI>Call Chain = straight_turn_update_line &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fsub &rArr; __aeabi_fadd &rArr; _float_epilogue
+<BR><BR>[Stack]<UL><LI>Max Depth = 148<LI>Call Chain = straight_turn_update_line &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[29]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fsub
 <LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
@@ -3691,7 +3689,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[17b]"></a>straight_turn_monitor_arc_exit</STRONG> (Thumb, 64 bytes, Stack size 24 bytes, straight_turn_test.o(.text.straight_turn_monitor_arc_exit))
-<BR><BR>[Stack]<UL><LI>Max Depth = 140<LI>Call Chain = straight_turn_monitor_arc_exit &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fsub &rArr; __aeabi_fadd &rArr; _float_epilogue
+<BR><BR>[Stack]<UL><LI>Max Depth = 140<LI>Call Chain = straight_turn_monitor_arc_exit &rArr; IR_ReadLineErrorFour &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[29]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fsub
 <LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fadd
