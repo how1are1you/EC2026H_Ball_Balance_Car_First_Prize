@@ -19,6 +19,7 @@ All rights reserved
 ***********************************************/
 #include "show.h"
 #include "IR_Module.h"
+#include "ball_balance.h"
 #include "imu/imu.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
@@ -562,7 +563,10 @@ static void vision_uart_oled_show(void)
         oled_show_text(30, 40, "--");
     }
 
-    oled_show_text(0, 50, "HOLD KEY:MENU");
+    oled_show_text(0, 50, "PWM:");
+    OLED_ShowNumber(
+        24, 50, ball_balance_servo_pulse_us, 4, 12);
+    oled_show_text(54, 50, "HOLD:MENU");
     OLED_Refresh_Gram();
 }
 

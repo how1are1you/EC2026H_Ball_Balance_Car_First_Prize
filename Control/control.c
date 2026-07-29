@@ -20,6 +20,8 @@ All rights reserved
 #include "control.h"
 #include "IR_Module.h"
 #include "imu/imu.h"
+#include "ball_balance.h"
+#include "servo.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
 
@@ -56,12 +58,18 @@ void TIMER_0_INST_IRQHandler(void)
 				StraightTurnTest_Reset();
 				lastRunMode = Run_Mode;
 			}
+			ball_balance_set_enabled(
+				(Menu_Active == 0U) &&
+				(Run_Mode == RUN_MODE_BALL_LAP ||
+				 Run_Mode == RUN_MODE_UART_DEBUG));
+			ball_balance_update();
+			Servo = (int)servo_get_pulse_us();
 			if (Flag_Stop)
 			{
 				Reset_Velocity_PI();
 				MotorA.Target_Encoder = 0.0f;
 				MotorB.Target_Encoder = 0.0f;
-				Set_PWM(0,0,0);
+				motor_set_pwm(0,0);
 				return;
 			}
 			if(Run_Mode==RUN_MODE_ONE_LAP){
@@ -75,14 +83,14 @@ void TIMER_0_INST_IRQHandler(void)
 			if (Flag_Stop)
 			{
 				Reset_Velocity_PI();
-				Set_PWM(0,0,0);
+				motor_set_pwm(0,0);
 				return;
 			}
 //			//计算左右电机对应的PWM
 			MotorA.Motor_Pwm = Incremental_PI_Left(MotorA.Current_Encoder,MotorA.Target_Encoder);	
 			MotorB.Motor_Pwm = Incremental_PI_Right(MotorB.Current_Encoder,MotorB.Target_Encoder);
 			Limit_Pwm(7500) ;
-			Set_PWM(MotorA.Motor_Pwm,MotorB.Motor_Pwm,Servo);
+			motor_set_pwm(MotorA.Motor_Pwm,MotorB.Motor_Pwm);
 		}
     }
 }
@@ -120,7 +128,6 @@ void Get_Target_Encoder(float Vx,float Vz)
 		Vx - 0.5f * DRIVE_WHEEL_SPACING * Vz;
 	MotorB.Target_Encoder =
 		Vx + 0.5f * DRIVE_WHEEL_SPACING * Vz;
-	Servo = Servo_Init;
 	MotorA.Target_Encoder=target_limit_float(MotorA.Target_Encoder,-amplitude,amplitude); 
 	MotorB.Target_Encoder=target_limit_float(MotorB.Target_Encoder,-amplitude,amplitude); 
 }

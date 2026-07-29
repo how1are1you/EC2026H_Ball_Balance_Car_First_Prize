@@ -565,6 +565,11 @@
               <FilePath>..\Hardware\motor.c</FilePath>
             </File>
             <File>
+              <FileName>servo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\servo.c</FilePath>
+            </File>
+            <File>
               <FileName>encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\encoder.c</FilePath>
@@ -623,6 +628,11 @@
               <FileName>uart_callback.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Control\uart_callback.c</FilePath>
+            </File>
+            <File>
+              <FileName>ball_balance.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_balance.c</FilePath>
             </File>
             <File>
               <FileName>turn_calibration.c</FileName>

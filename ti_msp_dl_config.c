@@ -329,7 +329,7 @@ static const DL_TimerA_ClockConfig gPWM_1ClockConfig = {
 
 static const DL_TimerA_PWMConfig gPWM_1Config = {
     .pwmMode = DL_TIMER_PWM_MODE_EDGE_ALIGN_UP,
-    .period = 10000,
+    .period = 20000,
     .isTimerWithFourCC = true,
     .startTimer = DL_TIMER_START,
 };
@@ -346,7 +346,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_PWM_1_init(void) {
 		DL_TIMER_CC_OCTL_INV_OUT_DISABLED, DL_TIMER_CC_OCTL_SRC_FUNCVAL,
 		DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
 
-    DL_TimerA_setCaptCompUpdateMethod(PWM_1_INST, DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
+    DL_TimerA_setCaptCompUpdateMethod(PWM_1_INST, DL_TIMER_CC_UPDATE_METHOD_ZERO_EVT, DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
     DL_TimerA_setCaptureCompareValue(PWM_1_INST, 1499, DL_TIMER_CC_0_INDEX);
 
     DL_TimerA_enableClock(PWM_1_INST);
@@ -503,8 +503,6 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_1_init(void)
                                  DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR |
                                  DL_UART_MAIN_INTERRUPT_PARITY_ERROR |
                                  DL_UART_MAIN_INTERRUPT_RX);
-    /* Setting the Interrupt Priority */
-    NVIC_SetPriority(UART_1_INST_INT_IRQN, 1);
 
     /* Configure FIFOs */
     DL_UART_Main_enableFIFOs(UART_1_INST);

@@ -30,7 +30,9 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "board.h"
+#include "ball_balance.h"
 #include "imu/imu.h"
+#include "servo.h"
 
 #define IMU_STARTUP_STABILIZE_MS (10000UL)
 
@@ -73,6 +75,8 @@ int main(void)
     // 系统初始化
     SYSCFG_DL_init(); // 初始化系统配置
     vision_uart_reset();
+    servo_init();
+    ball_balance_init();
     // 清除所有外设的中断挂起状态
     NVIC_ClearPendingIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN); // 编码器A与MPU6050中断
     NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);            // 编码器B中断
@@ -93,8 +97,6 @@ int main(void)
     {
         imu_wait_for_stabilization();
     }
-    // 舵机初始化回归中位
-    DL_Timer_setCaptureCompareValue(PWM_1_INST, Servo_Init, GPIO_PWM_1_C0_IDX);
     // 主循环
     while (1)
     {
