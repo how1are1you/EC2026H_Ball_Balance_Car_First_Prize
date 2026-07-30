@@ -10,22 +10,19 @@
 #define STRAIGHT_TURN_CONTROL_PERIOD_S (0.005f)
 #define STRAIGHT_TURN_DISTANCE_M (1.500f)
 #define STRAIGHT_TURN_ACCELERATION_MPS2 (0.30f)
-#define STRAIGHT_TURN_LINE_HEADING_GAIN_DEG (3.0f)
-#define STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG (9.0f)
 #define STRAIGHT_TURN_HEADING_KP (0.025f)
 #define STRAIGHT_TURN_GYRO_KD (0.0020f)
-#define STRAIGHT_TURN_MAX_OMEGA_RAD_S (0.22f)
+#define STRAIGHT_TURN_LINE_OMEGA_KP (0.10f)
+#define STRAIGHT_TURN_MAX_OMEGA_RAD_S (0.45f)
 #define STRAIGHT_TURN_LINE_FILTER_GAIN (0.08f)
-#define STRAIGHT_TURN_EXIT_FILTER_GAIN (0.15f)
 #define STRAIGHT_TURN_MAX_DISTANCE_STEP_M (0.005f)
 #define STRAIGHT_TURN_LINE_LOST_TICKS (200U)
 #define STRAIGHT_TURN_IMU_STALE_TICKS (200U)
 #define STRAIGHT_TURN_TIMEOUT_TICKS (8000U)
 #define STRAIGHT_TURN_ARC_TARGET_DEG (177.0f)
-#define STRAIGHT_TURN_ARC_MONITOR_DEG (5.0f)
 #define STRAIGHT_TURN_ARC_BLEND_DEG (4.0f)
 #define STRAIGHT_TURN_ARC_STOP_MARGIN_DEG (0.5f)
-#define STRAIGHT_TURN_CLOCKWISE_HEADING_DEG (-180.0f)
+#define STRAIGHT_TURN_SECOND_STRAIGHT_HEADING_DEG (-177.0f)
 
 volatile StraightTurnState_t StraightTurnState =
     STRAIGHT_TURN_IDLE;
@@ -42,7 +39,6 @@ static float straight_turn_straight_heading_yaw;
 static float straight_turn_arc_start_yaw;
 static float straight_turn_last_valid_yaw;
 static float straight_turn_filtered_line_error;
-static float straight_turn_exit_line_error;
 static float straight_turn_gyro_z_dps;
 static uint32_t straight_turn_last_imu_sample;
 static uint16_t straight_turn_imu_stale_ticks;
@@ -149,40 +145,20 @@ static uint8_t straight_turn_update_line(void)
     return 1U;
 }
 
-static void straight_turn_monitor_arc_exit(void)
-{
-    float line_error;
-
-    if (IR_ReadLineErrorFour(&line_error) == 0U)
-    {
-        return;
-    }
-
-    straight_turn_exit_line_error +=
-        STRAIGHT_TURN_EXIT_FILTER_GAIN *
-        (line_error - straight_turn_exit_line_error);
-    StraightTurnLineError = straight_turn_exit_line_error;
-}
-
 static float straight_turn_heading_omega(
     float heading_yaw,
     float line_error)
 {
-    float target_heading_yaw =
-        heading_yaw +
-        straight_turn_limit(
-            STRAIGHT_TURN_LINE_HEADING_GAIN_DEG * line_error,
-            -STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG,
-            STRAIGHT_TURN_MAX_HEADING_OFFSET_DEG);
     float command_omega;
 
     StraightTurnHeadingErrorDeg =
         straight_turn_wrap_180(
-            target_heading_yaw - straight_turn_last_valid_yaw);
+            heading_yaw - straight_turn_last_valid_yaw);
     command_omega =
         STRAIGHT_TURN_HEADING_KP *
             StraightTurnHeadingErrorDeg -
-        STRAIGHT_TURN_GYRO_KD * straight_turn_gyro_z_dps;
+        STRAIGHT_TURN_GYRO_KD * straight_turn_gyro_z_dps +
+        STRAIGHT_TURN_LINE_OMEGA_KP * line_error;
     return straight_turn_limit(
         command_omega,
         -STRAIGHT_TURN_MAX_OMEGA_RAD_S,
@@ -217,7 +193,6 @@ static void straight_turn_start_arc(uint8_t first_arc)
 {
     straight_turn_arc_start_yaw =
         straight_turn_last_valid_yaw;
-    straight_turn_exit_line_error = 0.0f;
 
     if (first_arc != 0U)
     {
@@ -291,8 +266,8 @@ static void straight_turn_blend_arc_exit(float yaw_magnitude)
     float straight_omega =
         straight_turn_heading_omega(
             straight_turn_initial_yaw +
-                STRAIGHT_TURN_CLOCKWISE_HEADING_DEG,
-            straight_turn_exit_line_error);
+                STRAIGHT_TURN_SECOND_STRAIGHT_HEADING_DEG,
+            0.0f);
     float command_omega =
         (1.0f - blend) * arc_omega +
         blend * straight_omega;
@@ -320,15 +295,9 @@ static void straight_turn_run_arc(void)
     if (first_arc != 0U &&
         yaw_magnitude >=
             STRAIGHT_TURN_ARC_TARGET_DEG -
-                STRAIGHT_TURN_ARC_MONITOR_DEG)
-    {
-        straight_turn_monitor_arc_exit();
-        if (yaw_magnitude >=
-            STRAIGHT_TURN_ARC_TARGET_DEG -
                 STRAIGHT_TURN_ARC_BLEND_DEG)
-        {
-            straight_turn_blend_arc_exit(yaw_magnitude);
-        }
+    {
+        straight_turn_blend_arc_exit(yaw_magnitude);
     }
 
     if (TurnCalibrationState == TURN_CALIBRATION_DONE)
@@ -339,9 +308,8 @@ static void straight_turn_run_arc(void)
             StraightTurnDistanceM = 0.0f;
             straight_turn_straight_heading_yaw =
                 straight_turn_initial_yaw +
-                STRAIGHT_TURN_CLOCKWISE_HEADING_DEG;
-            straight_turn_filtered_line_error =
-                straight_turn_exit_line_error;
+                STRAIGHT_TURN_SECOND_STRAIGHT_HEADING_DEG;
+            straight_turn_filtered_line_error = 0.0f;
             straight_turn_line_lost_ticks = 0U;
             straight_turn_command_straight();
         }
@@ -371,7 +339,6 @@ void StraightTurnTest_Reset(void)
     straight_turn_arc_start_yaw = 0.0f;
     straight_turn_last_valid_yaw = 0.0f;
     straight_turn_filtered_line_error = 0.0f;
-    straight_turn_exit_line_error = 0.0f;
     straight_turn_gyro_z_dps = 0.0f;
     straight_turn_last_imu_sample = 0U;
     straight_turn_imu_stale_ticks = 0U;
