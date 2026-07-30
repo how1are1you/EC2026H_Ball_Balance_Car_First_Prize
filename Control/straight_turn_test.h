@@ -22,7 +22,9 @@ typedef enum
 #define STRAIGHT_TURN_FAULT_IMU_STALE  (5U)
 
 #define STRAIGHT_TURN_FAST_SPEED_MPS   (0.35f)
-#define STRAIGHT_TURN_BALL_SPEED_MPS   (0.25f)
+#define STRAIGHT_TURN_BALL_SPEED_MPS   (0.40f)
+#define STRAIGHT_TURN_FAST_ACCELERATION_MPS2 (0.30f)
+#define STRAIGHT_TURN_BALL_ACCELERATION_MPS2 (0.13f)
 
 extern volatile StraightTurnState_t StraightTurnState;
 extern volatile uint8_t StraightTurnFault;
@@ -31,10 +33,13 @@ extern volatile float StraightTurnYawDeg;
 extern volatile float StraightTurnLineError;
 extern volatile float StraightTurnHeadingErrorDeg;
 extern volatile float StraightTurnCommandSpeed;
+extern volatile float StraightTurnStartupAccelerationMps2;
 extern volatile uint32_t StraightTurnElapsedMs;
 
 void StraightTurnTest_Run(void);
-void StraightTurnTest_Start(float target_speed_mps);
+void StraightTurnTest_Start(
+    float target_speed_mps,
+    float acceleration_mps2);
 void StraightTurnTest_Stop(void);
 void StraightTurnTest_Reset(void);
 

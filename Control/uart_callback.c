@@ -415,21 +415,21 @@ static void control_uart_print_pid(void)
         (uint32_t)(ball_balance_position_ki * 1000.0f + 0.5f);
     uint32_t velocity_kp =
         (uint32_t)(ball_balance_velocity_kp * 1000.0f + 0.5f);
-    uint32_t velocity_ki =
-        (uint32_t)(ball_balance_velocity_ki * 1000.0f + 0.5f);
+    uint32_t velocity_kd =
+        (uint32_t)(ball_balance_velocity_kd * 1000.0f + 0.5f);
     uint32_t velocity_limit =
         (uint32_t)(ball_balance_velocity_limit_mm_s + 0.5f);
 
     printf(
-        "PKP=%u.%03u PKI=%u.%03u VKP=%u.%03u VKI=%u.%03u VMAX=%u mm/s\r\n",
+        "PKP=%u.%03u PKI=%u.%03u VKP=%u.%03u VKD=%u.%03u VMAX=%u mm/s\r\n",
         (unsigned int)(position_kp / 1000U),
         (unsigned int)(position_kp % 1000U),
         (unsigned int)(position_ki / 1000U),
         (unsigned int)(position_ki % 1000U),
         (unsigned int)(velocity_kp / 1000U),
         (unsigned int)(velocity_kp % 1000U),
-        (unsigned int)(velocity_ki / 1000U),
-        (unsigned int)(velocity_ki % 1000U),
+        (unsigned int)(velocity_kd / 1000U),
+        (unsigned int)(velocity_kd % 1000U),
         (unsigned int)velocity_limit);
 }
 
@@ -439,7 +439,7 @@ static uint8_t control_uart_apply_pid_command(const char *command)
     float position_kp = ball_balance_position_kp;
     float position_ki = ball_balance_position_ki;
     float velocity_kp = ball_balance_velocity_kp;
-    float velocity_ki = ball_balance_velocity_ki;
+    float velocity_kd = ball_balance_velocity_kd;
     float velocity_limit = ball_balance_velocity_limit_mm_s;
 
     if (strcmp(command, "?") == 0 ||
@@ -479,13 +479,13 @@ static uint8_t control_uart_apply_pid_command(const char *command)
         }
         velocity_kp = gain;
     }
-    else if (strncmp(command, "VKI", 3U) == 0)
+    else if (strncmp(command, "VKD", 3U) == 0)
     {
         if (control_uart_parse_gain(command + 3, &gain) == 0U)
         {
             return 0U;
         }
-        velocity_ki = gain;
+        velocity_kd = gain;
     }
     else if (strncmp(command, "VMAX", 4U) == 0)
     {
@@ -504,7 +504,7 @@ static uint8_t control_uart_apply_pid_command(const char *command)
             position_kp,
             position_ki,
             velocity_kp,
-            velocity_ki,
+            velocity_kd,
             velocity_limit) == 0U)
     {
         return 0U;
@@ -675,7 +675,7 @@ void control_uart_service(void)
         {
             control_uart_error_count++;
             printf(
-                "ERR PKP0..20 PKI0..5 VKP0..20 VKI0..10 VMAX10..500\r\n");
+                "ERR PKP0..20 PKI0..5 VKP0..20 VKD0..10 VMAX10..500\r\n");
             return;
         }
         control_uart_command_count++;

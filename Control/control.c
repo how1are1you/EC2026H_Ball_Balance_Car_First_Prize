@@ -77,6 +77,11 @@ void TIMER_0_INST_IRQHandler(void)
 					(Menu_Active == 0U) &&
 					(Run_Mode == RUN_MODE_BALL_LAP));
 			}
+			ball_balance_set_vehicle_acceleration(
+				(Menu_Active == 0U &&
+				 Run_Mode == RUN_MODE_BALL_LAP &&
+				 Flag_Stop == 0U) ?
+					StraightTurnStartupAccelerationMps2 : 0.0f);
 			if (Menu_Active != 0U)
 			{
 				control_uart_set_mode(CONTROL_UART_DISABLED);
@@ -388,7 +393,10 @@ void Key(void)
                 StraightTurnTest_Start(
                     (Run_Mode == RUN_MODE_BALL_LAP) ?
                         STRAIGHT_TURN_BALL_SPEED_MPS :
-                        STRAIGHT_TURN_FAST_SPEED_MPS);
+                        STRAIGHT_TURN_FAST_SPEED_MPS,
+                    (Run_Mode == RUN_MODE_BALL_LAP) ?
+                        STRAIGHT_TURN_BALL_ACCELERATION_MPS2 :
+                        STRAIGHT_TURN_FAST_ACCELERATION_MPS2);
             }
             else
             {
