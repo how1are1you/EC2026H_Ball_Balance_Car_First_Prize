@@ -61,7 +61,23 @@ void TIMER_0_INST_IRQHandler(void)
 			ball_balance_set_enabled(
 				(Menu_Active == 0U) &&
 				(Run_Mode == RUN_MODE_BALL_LAP ||
-				 Run_Mode == RUN_MODE_UART_DEBUG));
+				 Run_Mode == RUN_MODE_BALL_STATIC));
+			if (Menu_Active != 0U)
+			{
+				control_uart_set_mode(CONTROL_UART_DISABLED);
+			}
+			else if (Run_Mode == RUN_MODE_SERVO_ADJUST)
+			{
+				control_uart_set_mode(CONTROL_UART_SERVO_ADJUST);
+			}
+			else if (Run_Mode == RUN_MODE_BALL_STATIC)
+			{
+				control_uart_set_mode(CONTROL_UART_PID_TUNING);
+			}
+			else
+			{
+				control_uart_set_mode(CONTROL_UART_DISABLED);
+			}
 			ball_balance_update();
 			Servo = (int)servo_get_pulse_us();
 			if (Flag_Stop)
@@ -255,11 +271,15 @@ void Key(void)
             }
             else if (Menu_Selection == RUN_MODE_BALL_LAP)
             {
-                Menu_Selection = RUN_MODE_IMU_DEBUG;
+                Menu_Selection = RUN_MODE_BALL_STATIC;
             }
-            else if (Menu_Selection == RUN_MODE_IMU_DEBUG)
+            else if (Menu_Selection == RUN_MODE_BALL_STATIC)
             {
-                Menu_Selection = RUN_MODE_UART_DEBUG;
+                Menu_Selection = RUN_MODE_SERVO_ADJUST;
+            }
+            else if (Menu_Selection == RUN_MODE_SERVO_ADJUST)
+            {
+                Menu_Selection = RUN_MODE_IMU_DEBUG;
             }
             else
             {
@@ -286,7 +306,8 @@ void Key(void)
         if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
             Run_Mode == RUN_MODE_BALL_LAP ||
             Run_Mode == RUN_MODE_IMU_DEBUG ||
-            Run_Mode == RUN_MODE_UART_DEBUG)
+            Run_Mode == RUN_MODE_BALL_STATIC ||
+            Run_Mode == RUN_MODE_SERVO_ADJUST)
         {
             Menu_Selection = (u8)Run_Mode;
         }
@@ -350,7 +371,8 @@ void Key(void)
             Flag_Stop = 1;
             imu_request_yaw_zero();
         }
-        else if (Run_Mode == RUN_MODE_UART_DEBUG)
+        else if (Run_Mode == RUN_MODE_BALL_STATIC ||
+                 Run_Mode == RUN_MODE_SERVO_ADJUST)
         {
             Flag_Stop = 1;
         }

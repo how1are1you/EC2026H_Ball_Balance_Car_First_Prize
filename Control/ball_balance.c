@@ -5,14 +5,24 @@
 
 #define BALL_BALANCE_MIN_DT_MS             (5UL)
 #define BALL_BALANCE_MAX_DT_MS             (200UL)
-#define BALL_BALANCE_DEADBAND_MM            (1.0f)
-#define BALL_BALANCE_INTEGRAL_LIMIT_MM_S    (1000.0f)
-#define BALL_BALANCE_VELOCITY_FILTER_ALPHA  (0.25f)
+#define BALL_BALANCE_POSITION_DEADBAND_MM   (1.0f)
+#define BALL_BALANCE_VELOCITY_DEADBAND_MM_S (2.0f)
+#define BALL_BALANCE_VELOCITY_INTEGRAL_LIMIT_MM (500.0f)
+#define BALL_BALANCE_VELOCITY_FILTER_ALPHA  (0.35f)
 
 extern volatile unsigned long tick_ms;
 
-volatile float ball_balance_target_mm =
-    BALL_BALANCE_DEFAULT_TARGET_MM;
+volatile float ball_balance_target_mm = BALL_BALANCE_TARGET_MM;
+volatile float ball_balance_position_kp =
+    BALL_BALANCE_POSITION_KP_PER_S;
+volatile float ball_balance_velocity_kp =
+    BALL_BALANCE_VELOCITY_KP_US_PER_MM_S;
+volatile float ball_balance_velocity_ki =
+    BALL_BALANCE_VELOCITY_KI_US_PER_MM;
+volatile float ball_balance_velocity_limit_mm_s =
+    BALL_BALANCE_TARGET_VELOCITY_MAX_MM_S;
+volatile float ball_balance_target_velocity_mm_s;
+volatile float ball_balance_measured_velocity_mm_s;
 volatile uint16_t ball_balance_servo_pulse_us =
     SERVO_NEUTRAL_PULSE_US;
 volatile ball_balance_status_t ball_balance_status =
@@ -22,9 +32,9 @@ static uint8_t balance_enabled;
 static uint8_t have_previous_sample;
 static uint32_t previous_frame_count;
 static uint32_t previous_sample_ms;
-static float previous_position_mm;
 static float filtered_velocity_mm_s;
-static float integral_mm_s;
+static float velocity_integral_mm;
+static volatile uint8_t pid_reset_requested;
 
 static float clamp_float(float value, float minimum, float maximum)
 {
@@ -39,28 +49,66 @@ static float clamp_float(float value, float minimum, float maximum)
     return value;
 }
 
+static uint16_t quantize_control_pulse(float requested_pulse_us)
+{
+    int32_t pulse_us;
+    int32_t pulse_delta_us;
+    int32_t step_us = (int32_t)SERVO_EFFECTIVE_STEP_US;
+
+    pulse_us = (int32_t)(requested_pulse_us + 0.5f);
+    if (pulse_us < (int32_t)SERVO_CONTROL_MIN_PULSE_US)
+    {
+        pulse_us = SERVO_CONTROL_MIN_PULSE_US;
+    }
+    else if (pulse_us > (int32_t)SERVO_CONTROL_MAX_PULSE_US)
+    {
+        pulse_us = SERVO_CONTROL_MAX_PULSE_US;
+    }
+
+    pulse_delta_us =
+        pulse_us - (int32_t)SERVO_NEUTRAL_PULSE_US;
+    if (pulse_delta_us >= 0)
+    {
+        pulse_delta_us =
+            ((pulse_delta_us + step_us / 2) / step_us) *
+            step_us;
+    }
+    else
+    {
+        pulse_delta_us =
+            -(((-pulse_delta_us + step_us / 2) / step_us) *
+              step_us);
+    }
+
+    pulse_us =
+        (int32_t)SERVO_NEUTRAL_PULSE_US + pulse_delta_us;
+    if (pulse_us < (int32_t)SERVO_CONTROL_MIN_PULSE_US)
+    {
+        pulse_us = SERVO_CONTROL_MIN_PULSE_US;
+    }
+    else if (pulse_us > (int32_t)SERVO_CONTROL_MAX_PULSE_US)
+    {
+        pulse_us = SERVO_CONTROL_MAX_PULSE_US;
+    }
+    return (uint16_t)pulse_us;
+}
+
 static void reset_controller_state(void)
 {
     have_previous_sample = 0U;
     previous_frame_count = vision_ball_frame_count;
     previous_sample_ms = (uint32_t)tick_ms;
-    previous_position_mm = vision_ball_position_mm;
     filtered_velocity_mm_s = 0.0f;
-    integral_mm_s = 0.0f;
+    velocity_integral_mm = 0.0f;
+    ball_balance_target_velocity_mm_s = 0.0f;
+    ball_balance_measured_velocity_mm_s = 0.0f;
 }
 
-static void set_balance_pulse(float correction_us)
+static void set_control_pulse(float correction_us)
 {
-    float requested_pulse =
+    uint16_t pulse_us = quantize_control_pulse(
         (float)SERVO_NEUTRAL_PULSE_US +
-        BALL_BALANCE_SERVO_DIRECTION * correction_us;
-    uint16_t pulse_us;
-
-    requested_pulse = clamp_float(
-        requested_pulse,
-        (float)BALL_BALANCE_SERVO_MIN_US,
-        (float)BALL_BALANCE_SERVO_MAX_US);
-    pulse_us = (uint16_t)(requested_pulse + 0.5f);
+        BALL_BALANCE_SERVO_DIRECTION * correction_us);
 
     ball_balance_servo_pulse_us = pulse_us;
     servo_set_pulse_us(pulse_us);
@@ -69,10 +117,19 @@ static void set_balance_pulse(float correction_us)
 void ball_balance_init(void)
 {
     balance_enabled = 0U;
-    reset_controller_state();
-    ball_balance_servo_pulse_us = SERVO_NEUTRAL_PULSE_US;
+    ball_balance_target_mm = BALL_BALANCE_TARGET_MM;
+    ball_balance_position_kp =
+        BALL_BALANCE_POSITION_KP_PER_S;
+    ball_balance_velocity_kp =
+        BALL_BALANCE_VELOCITY_KP_US_PER_MM_S;
+    ball_balance_velocity_ki =
+        BALL_BALANCE_VELOCITY_KI_US_PER_MM;
+    ball_balance_velocity_limit_mm_s =
+        BALL_BALANCE_TARGET_VELOCITY_MAX_MM_S;
+    pid_reset_requested = 0U;
     ball_balance_status = BALL_BALANCE_DISABLED;
-    servo_set_pulse_us(SERVO_NEUTRAL_PULSE_US);
+    reset_controller_state();
+    set_control_pulse(0.0f);
 }
 
 void ball_balance_set_enabled(uint8_t enabled)
@@ -84,17 +141,49 @@ void ball_balance_set_enabled(uint8_t enabled)
     }
 
     balance_enabled = enabled;
+    ball_balance_target_mm = BALL_BALANCE_TARGET_MM;
     reset_controller_state();
-    set_balance_pulse(0.0f);
+    set_control_pulse(0.0f);
     ball_balance_status =
         (enabled != 0U) ? BALL_BALANCE_WAITING :
                           BALL_BALANCE_DISABLED;
 }
 
-void ball_balance_set_target_mm(float target_mm)
+uint8_t ball_balance_set_cascade_gains(
+    float position_kp,
+    float velocity_kp,
+    float velocity_ki,
+    float velocity_limit_mm_s)
 {
-    ball_balance_target_mm = target_mm;
-    integral_mm_s = 0.0f;
+    if (position_kp < BALL_BALANCE_POSITION_KP_MIN ||
+        position_kp > BALL_BALANCE_POSITION_KP_MAX ||
+        velocity_kp < BALL_BALANCE_VELOCITY_KP_MIN ||
+        velocity_kp > BALL_BALANCE_VELOCITY_KP_MAX ||
+        velocity_ki < BALL_BALANCE_VELOCITY_KI_MIN ||
+        velocity_ki > BALL_BALANCE_VELOCITY_KI_MAX ||
+        velocity_limit_mm_s <
+            BALL_BALANCE_VELOCITY_LIMIT_MIN_MM_S ||
+        velocity_limit_mm_s >
+            BALL_BALANCE_VELOCITY_LIMIT_MAX_MM_S)
+    {
+        return 0U;
+    }
+
+    ball_balance_position_kp = position_kp;
+    ball_balance_velocity_kp = velocity_kp;
+    ball_balance_velocity_ki = velocity_ki;
+    ball_balance_velocity_limit_mm_s = velocity_limit_mm_s;
+    pid_reset_requested = 1U;
+    return 1U;
+}
+
+void ball_balance_reset_pid_gains(void)
+{
+    (void)ball_balance_set_cascade_gains(
+        BALL_BALANCE_POSITION_KP_PER_S,
+        BALL_BALANCE_VELOCITY_KP_US_PER_MM_S,
+        BALL_BALANCE_VELOCITY_KI_US_PER_MM,
+        BALL_BALANCE_TARGET_VELOCITY_MAX_MM_S);
 }
 
 void ball_balance_update(void)
@@ -106,10 +195,18 @@ void ball_balance_update(void)
     uint32_t sample_ms;
     uint32_t dt_ms;
     float position_mm;
-    float error_mm;
     float velocity_mm_s;
+    float position_error_mm;
+    float target_velocity_mm_s;
+    float velocity_error_mm_s;
     float correction_us;
     float dt_s;
+
+    if (pid_reset_requested != 0U)
+    {
+        pid_reset_requested = 0U;
+        reset_controller_state();
+    }
 
     if (balance_enabled == 0U)
     {
@@ -121,7 +218,7 @@ void ball_balance_update(void)
     {
         ball_balance_status = BALL_BALANCE_WAITING;
         reset_controller_state();
-        set_balance_pulse(0.0f);
+        set_control_pulse(0.0f);
         return;
     }
 
@@ -130,7 +227,7 @@ void ball_balance_update(void)
     {
         ball_balance_status = BALL_BALANCE_STALE;
         reset_controller_state();
-        set_balance_pulse(0.0f);
+        set_control_pulse(0.0f);
         return;
     }
 
@@ -138,6 +235,7 @@ void ball_balance_update(void)
     {
         frame_count_before = vision_ball_frame_count;
         position_mm = vision_ball_position_mm;
+        velocity_mm_s = vision_ball_velocity_mm_s;
         sample_ms = vision_ball_last_update_ms;
         frame_count = vision_ball_frame_count;
     } while (frame_count_before != frame_count);
@@ -146,56 +244,70 @@ void ball_balance_update(void)
     {
         return;
     }
-
     previous_frame_count = frame_count;
 
     if (have_previous_sample == 0U)
     {
         have_previous_sample = 1U;
-        previous_position_mm = position_mm;
+        filtered_velocity_mm_s = velocity_mm_s;
         previous_sample_ms = sample_ms;
-        ball_balance_status = BALL_BALANCE_ACTIVE;
-        return;
-    }
-
-    dt_ms = sample_ms - previous_sample_ms;
-    if (dt_ms < BALL_BALANCE_MIN_DT_MS)
-    {
         dt_ms = BALL_BALANCE_MIN_DT_MS;
     }
-    else if (dt_ms > BALL_BALANCE_MAX_DT_MS)
+    else
     {
-        dt_ms = BALL_BALANCE_MAX_DT_MS;
+        dt_ms = sample_ms - previous_sample_ms;
+        if (dt_ms < BALL_BALANCE_MIN_DT_MS)
+        {
+            dt_ms = BALL_BALANCE_MIN_DT_MS;
+        }
+        else if (dt_ms > BALL_BALANCE_MAX_DT_MS)
+        {
+            dt_ms = BALL_BALANCE_MAX_DT_MS;
+        }
+        filtered_velocity_mm_s +=
+            BALL_BALANCE_VELOCITY_FILTER_ALPHA *
+            (velocity_mm_s - filtered_velocity_mm_s);
     }
     dt_s = (float)dt_ms * 0.001f;
 
-    velocity_mm_s =
-        (position_mm - previous_position_mm) / dt_s;
-    filtered_velocity_mm_s +=
-        BALL_BALANCE_VELOCITY_FILTER_ALPHA *
-        (velocity_mm_s - filtered_velocity_mm_s);
-
-    error_mm = ball_balance_target_mm - position_mm;
-    if (error_mm > -BALL_BALANCE_DEADBAND_MM &&
-        error_mm < BALL_BALANCE_DEADBAND_MM)
+    position_error_mm = BALL_BALANCE_TARGET_MM - position_mm;
+    if (position_error_mm > -BALL_BALANCE_POSITION_DEADBAND_MM &&
+        position_error_mm < BALL_BALANCE_POSITION_DEADBAND_MM)
     {
-        error_mm = 0.0f;
+        position_error_mm = 0.0f;
     }
 
-    integral_mm_s += error_mm * dt_s;
-    integral_mm_s = clamp_float(
-        integral_mm_s,
-        -BALL_BALANCE_INTEGRAL_LIMIT_MM_S,
-        BALL_BALANCE_INTEGRAL_LIMIT_MM_S);
+    target_velocity_mm_s =
+        ball_balance_position_kp * position_error_mm;
+    target_velocity_mm_s = clamp_float(
+        target_velocity_mm_s,
+        -ball_balance_velocity_limit_mm_s,
+        ball_balance_velocity_limit_mm_s);
+
+    velocity_error_mm_s =
+        target_velocity_mm_s - filtered_velocity_mm_s;
+    if (velocity_error_mm_s >
+            -BALL_BALANCE_VELOCITY_DEADBAND_MM_S &&
+        velocity_error_mm_s <
+            BALL_BALANCE_VELOCITY_DEADBAND_MM_S)
+    {
+        velocity_error_mm_s = 0.0f;
+    }
+
+    velocity_integral_mm += velocity_error_mm_s * dt_s;
+    velocity_integral_mm = clamp_float(
+        velocity_integral_mm,
+        -BALL_BALANCE_VELOCITY_INTEGRAL_LIMIT_MM,
+        BALL_BALANCE_VELOCITY_INTEGRAL_LIMIT_MM);
 
     correction_us =
-        BALL_BALANCE_KP_US_PER_MM * error_mm +
-        BALL_BALANCE_KI_US_PER_MM_S * integral_mm_s -
-        BALL_BALANCE_KD_US_PER_MM_PER_S *
-            filtered_velocity_mm_s;
+        ball_balance_velocity_kp * velocity_error_mm_s +
+        ball_balance_velocity_ki * velocity_integral_mm;
 
-    previous_position_mm = position_mm;
     previous_sample_ms = sample_ms;
+    ball_balance_target_velocity_mm_s = target_velocity_mm_s;
+    ball_balance_measured_velocity_mm_s =
+        filtered_velocity_mm_s;
     ball_balance_status = BALL_BALANCE_ACTIVE;
-    set_balance_pulse(correction_us);
+    set_control_pulse(correction_us);
 }

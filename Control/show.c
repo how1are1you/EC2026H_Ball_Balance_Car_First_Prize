@@ -21,6 +21,7 @@ All rights reserved
 #include "IR_Module.h"
 #include "ball_balance.h"
 #include "imu/imu.h"
+#include "servo.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
 #include "uart_callback.h"
@@ -502,11 +503,12 @@ static void straight_turn_oled_show(void)
     OLED_Refresh_Gram();
 }
 
-static void vision_uart_oled_show(void)
+static void ball_static_oled_show(void)
 {
     float position_mm = vision_ball_position_mm;
-    uint32_t frame_count = vision_ball_frame_count;
-    uint32_t error_count = vision_uart_error_count;
+    float velocity_mm_s = vision_ball_velocity_mm_s;
+    float target_velocity_mm_s =
+        ball_balance_target_velocity_mm_s;
     uint32_t age_ms =
         (uint32_t)((uint32_t)tick_ms - vision_ball_last_update_ms);
     uint8_t valid = vision_ball_position_valid;
@@ -532,8 +534,8 @@ static void vision_uart_oled_show(void)
     }
 
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
-    oled_show_text(0, 0, "UART1 RX:");
-    oled_show_text(60, 0, status_text);
+    oled_show_text(0, 0, "STATIC PID:");
+    oled_show_text(72, 0, status_text);
 
     oled_show_text(0, 10, "POS:");
     if (valid != 0U)
@@ -546,11 +548,22 @@ static void vision_uart_oled_show(void)
         oled_show_text(30, 10, "--");
     }
 
-    oled_show_text(0, 20, "FRAME:");
-    OLED_ShowNumber(42, 20, frame_count % 100000000U, 8, 12);
+    oled_show_text(0, 20, "VEL:");
+    if (valid != 0U)
+    {
+        position_end_x =
+            vision_show_position_mm(30, 20, velocity_mm_s);
+        oled_show_text((uint8_t)(position_end_x + 4U), 20, "mm/s");
+    }
+    else
+    {
+        oled_show_text(30, 20, "--");
+    }
 
-    oled_show_text(0, 30, "ERROR:");
-    OLED_ShowNumber(42, 30, error_count % 100000000U, 8, 12);
+    oled_show_text(0, 30, "VT:");
+    position_end_x =
+        vision_show_position_mm(24, 30, target_velocity_mm_s);
+    oled_show_text((uint8_t)(position_end_x + 4U), 30, "mm/s");
 
     oled_show_text(0, 40, "AGE:");
     if (valid != 0U)
@@ -567,6 +580,32 @@ static void vision_uart_oled_show(void)
     OLED_ShowNumber(
         24, 50, ball_balance_servo_pulse_us, 4, 12);
     oled_show_text(54, 50, "HOLD:MENU");
+    OLED_Refresh_Gram();
+}
+
+static void servo_adjust_oled_show(void)
+{
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+
+    oled_show_text(0, 0, "SERVO ADJ UART0");
+    oled_show_text(0, 10, "PWM:");
+    OLED_ShowNumber(30, 10, servo_get_pulse_us(), 4, 12);
+    oled_show_text(60, 10, "us");
+
+    oled_show_text(0, 20, "RANGE:");
+    OLED_ShowNumber(42, 20, SERVO_CONTROL_MIN_PULSE_US, 4, 12);
+    OLED_ShowChar(66, 20, '-', 12, 1);
+    OLED_ShowNumber(72, 20, SERVO_CONTROL_MAX_PULSE_US, 4, 12);
+
+    oled_show_text(0, 30, "STEP:+/-10us");
+    oled_show_text(0, 40, "CMD:Pxxxx + - ?");
+    oled_show_text(0, 50, "OK:");
+    OLED_ShowNumber(
+        18, 50, control_uart_command_count % 1000U, 3, 12);
+    oled_show_text(42, 50, "ERR:");
+    OLED_ShowNumber(
+        66, 50, control_uart_error_count % 1000U, 3, 12);
+    oled_show_text(90, 50, "HOLD");
     OLED_Refresh_Gram();
 }
 
@@ -605,11 +644,11 @@ static void menu_oled_show(void)
 {
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
 
-    oled_show_text(0, 0, "SELECT MODE");
-    menu_show_item(16, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
-    menu_show_item(28, RUN_MODE_BALL_LAP, "BALL LAP");
-    menu_show_item(40, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
-    menu_show_item(52, RUN_MODE_UART_DEBUG, "UART RX");
+    menu_show_item(0, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
+    menu_show_item(12, RUN_MODE_BALL_LAP, "BALL LAP");
+    menu_show_item(24, RUN_MODE_BALL_STATIC, "STATIC PID");
+    menu_show_item(36, RUN_MODE_SERVO_ADJUST, "SERVO ADJ");
+    menu_show_item(48, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
 
     OLED_Refresh_Gram();
 }
@@ -639,9 +678,14 @@ void oled_show(void)
         imu_debug_oled_show();
         return;
     }
-    if (Run_Mode == RUN_MODE_UART_DEBUG)
+    if (Run_Mode == RUN_MODE_BALL_STATIC)
     {
-        vision_uart_oled_show();
+        ball_static_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_SERVO_ADJUST)
+    {
+        servo_adjust_oled_show();
         return;
     }
     if (Run_Mode == RUN_MODE_TURN_CAL)
@@ -734,7 +778,8 @@ void APP_Show(void)
         Run_Mode == RUN_MODE_TURN_CAL ||
         Run_Mode == RUN_MODE_STRAIGHT_TURN ||
         Run_Mode == RUN_MODE_BALL_LAP ||
-        Run_Mode == RUN_MODE_UART_DEBUG)
+        Run_Mode == RUN_MODE_BALL_STATIC ||
+        Run_Mode == RUN_MODE_SERVO_ADJUST)
     {
         return;
     }

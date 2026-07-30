@@ -22,7 +22,8 @@ void servo_set_pulse_us(uint16_t pulse_us)
 
     servo_pulse_us = pulse_us;
     DL_Timer_setCaptureCompareValue(
-        PWM_1_INST, pulse_us, GPIO_PWM_1_C0_IDX);
+        PWM_1_INST, (uint32_t)pulse_us - 1U,
+        GPIO_PWM_1_C0_IDX);
 }
 
 uint16_t servo_get_pulse_us(void)

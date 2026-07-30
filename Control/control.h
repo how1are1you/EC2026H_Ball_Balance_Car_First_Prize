@@ -27,8 +27,9 @@ All rights reserved
 #define RUN_MODE_TURN_CAL     3
 #define RUN_MODE_STRAIGHT_TURN 4
 #define RUN_MODE_BALL_LAP     5
-#define RUN_MODE_UART_DEBUG   6
-#define RUN_MODE_COUNT        7
+#define RUN_MODE_BALL_STATIC  6
+#define RUN_MODE_SERVO_ADJUST 7
+#define RUN_MODE_COUNT        8
 #define RUN_MODE_MENU_DEFAULT RUN_MODE_STRAIGHT_TURN
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;

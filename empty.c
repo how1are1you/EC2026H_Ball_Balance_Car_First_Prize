@@ -43,7 +43,7 @@ float RC_Velocity = 200, RC_Turn_Velocity, Move_X, Move_Y, Move_Z, PS2_ON_Flag; 
 float Velocity_Left, Velocity_Right;                                            // 车轮速度(mm/s)
 u16 test_num, show_cnt;
 float Voltage = 0;
-int Servo_Init = 1500;
+int Servo_Init = 1216;
 
 static void imu_wait_for_stabilization(void)
 {
@@ -75,6 +75,7 @@ int main(void)
     // 系统初始化
     SYSCFG_DL_init(); // 初始化系统配置
     vision_uart_reset();
+    control_uart_reset();
     servo_init();
     ball_balance_init();
     // 清除所有外设的中断挂起状态
@@ -101,6 +102,7 @@ int main(void)
     while (1)
     {
         imu_service();
+        control_uart_service();
         Voltage = Get_battery_volt(); // 采样小车当前电压
         oled_show();                  //  OLED显示更新
     }
