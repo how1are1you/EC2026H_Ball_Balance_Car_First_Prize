@@ -9,6 +9,7 @@
 
 #define STRAIGHT_TURN_CONTROL_PERIOD_S (0.005f)
 #define STRAIGHT_TURN_DISTANCE_M (1.500f)
+#define STRAIGHT_TURN_ARC_LEAD_M (0.030f)
 #define STRAIGHT_TURN_ACCELERATION_MPS2 (0.30f)
 #define STRAIGHT_TURN_HEADING_KP (0.025f)
 #define STRAIGHT_TURN_GYRO_KD (0.0020f)
@@ -219,6 +220,7 @@ static void straight_turn_start_arc(uint8_t first_arc)
 static void straight_turn_run_straight(void)
 {
     float distance_step;
+    float turn_start_distance;
     uint8_t first_straight =
         (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1) ? 1U : 0U;
 
@@ -237,7 +239,10 @@ static void straight_turn_run_straight(void)
             0.0f,
             STRAIGHT_TURN_MAX_DISTANCE_STEP_M);
 
-    if (StraightTurnDistanceM >= STRAIGHT_TURN_DISTANCE_M)
+    turn_start_distance =
+        STRAIGHT_TURN_DISTANCE_M -
+        STRAIGHT_TURN_ARC_LEAD_M;
+    if (StraightTurnDistanceM >= turn_start_distance)
     {
         straight_turn_start_arc(first_straight);
         return;
