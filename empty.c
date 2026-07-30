@@ -31,6 +31,7 @@
  */
 #include "board.h"
 #include "ball_balance.h"
+#include "ball_static_task.h"
 #include "imu/imu.h"
 #include "servo.h"
 
@@ -43,7 +44,7 @@ float RC_Velocity = 200, RC_Turn_Velocity, Move_X, Move_Y, Move_Z, PS2_ON_Flag; 
 float Velocity_Left, Velocity_Right;                                            // 车轮速度(mm/s)
 u16 test_num, show_cnt;
 float Voltage = 0;
-int Servo_Init = 1216;
+int Servo_Init = SERVO_NEUTRAL_PULSE_US;
 
 static void imu_wait_for_stabilization(void)
 {
@@ -78,6 +79,7 @@ int main(void)
     control_uart_reset();
     servo_init();
     ball_balance_init();
+    ball_static_task_init();
     // 清除所有外设的中断挂起状态
     NVIC_ClearPendingIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN); // 编码器A与MPU6050中断
     NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);            // 编码器B中断
@@ -103,6 +105,7 @@ int main(void)
     {
         imu_service();
         control_uart_service();
+        ball_static_task_service();
         Voltage = Get_battery_volt(); // 采样小车当前电压
         oled_show();                  //  OLED显示更新
     }

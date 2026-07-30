@@ -635,6 +635,11 @@
               <FilePath>..\Control\ball_balance.c</FilePath>
             </File>
             <File>
+              <FileName>ball_static_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_static_task.c</FilePath>
+            </File>
+            <File>
               <FileName>turn_calibration.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Control\turn_calibration.c</FilePath>

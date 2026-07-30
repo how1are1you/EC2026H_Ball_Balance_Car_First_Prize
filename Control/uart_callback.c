@@ -1,6 +1,7 @@
 #include "uart_callback.h"
 
 #include "ball_balance.h"
+#include "ball_static_task.h"
 #include "servo.h"
 #include "ti_msp_dl_config.h"
 
@@ -15,6 +16,10 @@
 #define VISION_FRAME_TIMEOUT_MS         (10UL)
 #define FLOAT32_EXPONENT_MASK           (0x7F800000UL)
 #define SERVO_UART_LINE_SIZE            (16U)
+#define VISION_POSITION_FILTER_ALPHA    (0.55f)
+#define VISION_VELOCITY_FILTER_ALPHA    (0.45f)
+#define VISION_FILTER_MIN_DT_MS         (5UL)
+#define VISION_FILTER_MAX_DT_MS         (200UL)
 
 extern volatile unsigned long tick_ms;
 
@@ -33,6 +38,10 @@ volatile uint32_t control_uart_error_count;
 static volatile uint8_t vision_payload_index;
 static uint8_t vision_payload[VISION_FRAME_PAYLOAD_SIZE];
 static volatile uint32_t vision_last_byte_ms;
+static uint8_t vision_filter_initialized;
+static float vision_filtered_position_mm;
+static float vision_filtered_velocity_mm_s;
+static uint32_t vision_previous_sample_ms;
 static volatile control_uart_mode_t control_uart_mode;
 static volatile uint8_t servo_uart_rx_length;
 static volatile uint8_t servo_uart_command_ready;
@@ -59,8 +68,13 @@ static void vision_uart_publish_sample(void)
         vision_uart_read_u32_le(VISION_POSITION_OFFSET);
     uint32_t raw_velocity =
         vision_uart_read_u32_le(VISION_VELOCITY_OFFSET);
+    uint32_t now_ms;
+    uint32_t dt_ms;
     float position_cm;
     float velocity_cm_s;
+    float position_mm;
+    float previous_position_mm;
+    float derived_velocity_mm_s;
 
     /*
      * The protocol payload is IEEE-754 float32 in little-endian order.
@@ -77,9 +91,45 @@ static void vision_uart_publish_sample(void)
 
     memcpy(&position_cm, &raw_position, sizeof(position_cm));
     memcpy(&velocity_cm_s, &raw_velocity, sizeof(velocity_cm_s));
-    vision_ball_position_mm = position_cm * 10.0f;
-    vision_ball_velocity_mm_s = velocity_cm_s * 10.0f;
-    vision_ball_last_update_ms = (uint32_t)tick_ms;
+    now_ms = (uint32_t)tick_ms;
+    position_mm = position_cm * 10.0f;
+
+    if (vision_filter_initialized == 0U)
+    {
+        vision_filter_initialized = 1U;
+        vision_filtered_position_mm = position_mm;
+        vision_filtered_velocity_mm_s = velocity_cm_s * 10.0f;
+    }
+    else
+    {
+        previous_position_mm = vision_filtered_position_mm;
+        vision_filtered_position_mm +=
+            VISION_POSITION_FILTER_ALPHA *
+            (position_mm - vision_filtered_position_mm);
+        dt_ms = now_ms - vision_previous_sample_ms;
+        if (dt_ms >= VISION_FILTER_MIN_DT_MS &&
+            dt_ms <= VISION_FILTER_MAX_DT_MS)
+        {
+            derived_velocity_mm_s =
+                (vision_filtered_position_mm -
+                 previous_position_mm) *
+                1000.0f / (float)dt_ms;
+            vision_filtered_velocity_mm_s +=
+                VISION_VELOCITY_FILTER_ALPHA *
+                (derived_velocity_mm_s -
+                 vision_filtered_velocity_mm_s);
+        }
+        else if (dt_ms > VISION_FILTER_MAX_DT_MS)
+        {
+            vision_filtered_velocity_mm_s =
+                velocity_cm_s * 10.0f;
+        }
+    }
+
+    vision_previous_sample_ms = now_ms;
+    vision_ball_position_mm = vision_filtered_position_mm;
+    vision_ball_velocity_mm_s = vision_filtered_velocity_mm_s;
+    vision_ball_last_update_ms = now_ms;
     vision_ball_position_valid = 1U;
     vision_ball_frame_count++;
 }
@@ -123,6 +173,10 @@ void vision_uart_reset(void)
     vision_uart_error_count = 0U;
     vision_ball_position_valid = 0U;
     vision_last_byte_ms = (uint32_t)tick_ms;
+    vision_filter_initialized = 0U;
+    vision_filtered_position_mm = 0.0f;
+    vision_filtered_velocity_mm_s = 0.0f;
+    vision_previous_sample_ms = (uint32_t)tick_ms;
     memset(vision_payload, 0, sizeof(vision_payload));
     vision_uart_reset_parser();
 }
@@ -147,7 +201,7 @@ void control_uart_set_mode(control_uart_mode_t mode)
 {
     control_uart_mode_t previous_mode = control_uart_mode;
 
-    if (mode > CONTROL_UART_PID_TUNING)
+    if (mode > CONTROL_UART_OPEN_LOOP_TUNING)
     {
         mode = CONTROL_UART_DISABLED;
     }
@@ -232,7 +286,7 @@ static uint8_t servo_uart_parse_pulse(
     uint32_t value = 0U;
     uint8_t have_digit = 0U;
 
-    while (*text == ' ')
+    while (*text == ' ' || *text == '=')
     {
         text++;
     }
@@ -240,7 +294,7 @@ static uint8_t servo_uart_parse_pulse(
     {
         text++;
     }
-    while (*text == ' ')
+    while (*text == ' ' || *text == '=')
     {
         text++;
     }
@@ -297,9 +351,18 @@ static uint8_t control_uart_parse_gain(
     uint32_t fraction = 0U;
     uint32_t divisor = 1U;
     uint8_t have_digit = 0U;
+    float sign = 1.0f;
 
     while (*text == ' ' || *text == '=')
     {
+        text++;
+    }
+    if (*text == '-' || *text == '+')
+    {
+        if (*text == '-')
+        {
+            sign = -1.0f;
+        }
         text++;
     }
 
@@ -339,7 +402,8 @@ static uint8_t control_uart_parse_gain(
         return 0U;
     }
 
-    *gain = (float)whole + (float)fraction / (float)divisor;
+    *gain = sign *
+        ((float)whole + (float)fraction / (float)divisor);
     return 1U;
 }
 
@@ -347,6 +411,8 @@ static void control_uart_print_pid(void)
 {
     uint32_t position_kp =
         (uint32_t)(ball_balance_position_kp * 1000.0f + 0.5f);
+    uint32_t position_ki =
+        (uint32_t)(ball_balance_position_ki * 1000.0f + 0.5f);
     uint32_t velocity_kp =
         (uint32_t)(ball_balance_velocity_kp * 1000.0f + 0.5f);
     uint32_t velocity_ki =
@@ -355,9 +421,11 @@ static void control_uart_print_pid(void)
         (uint32_t)(ball_balance_velocity_limit_mm_s + 0.5f);
 
     printf(
-        "PKP=%u.%03u VKP=%u.%03u VKI=%u.%03u VMAX=%u mm/s\r\n",
+        "PKP=%u.%03u PKI=%u.%03u VKP=%u.%03u VKI=%u.%03u VMAX=%u mm/s\r\n",
         (unsigned int)(position_kp / 1000U),
         (unsigned int)(position_kp % 1000U),
+        (unsigned int)(position_ki / 1000U),
+        (unsigned int)(position_ki % 1000U),
         (unsigned int)(velocity_kp / 1000U),
         (unsigned int)(velocity_kp % 1000U),
         (unsigned int)(velocity_ki / 1000U),
@@ -369,6 +437,7 @@ static uint8_t control_uart_apply_pid_command(const char *command)
 {
     float gain;
     float position_kp = ball_balance_position_kp;
+    float position_ki = ball_balance_position_ki;
     float velocity_kp = ball_balance_velocity_kp;
     float velocity_ki = ball_balance_velocity_ki;
     float velocity_limit = ball_balance_velocity_limit_mm_s;
@@ -393,6 +462,14 @@ static uint8_t control_uart_apply_pid_command(const char *command)
             return 0U;
         }
         position_kp = gain;
+    }
+    else if (strncmp(command, "PKI", 3U) == 0)
+    {
+        if (control_uart_parse_gain(command + 3, &gain) == 0U)
+        {
+            return 0U;
+        }
+        position_ki = gain;
     }
     else if (strncmp(command, "VKP", 3U) == 0)
     {
@@ -425,6 +502,7 @@ static uint8_t control_uart_apply_pid_command(const char *command)
 
     if (ball_balance_set_cascade_gains(
             position_kp,
+            position_ki,
             velocity_kp,
             velocity_ki,
             velocity_limit) == 0U)
@@ -432,6 +510,133 @@ static uint8_t control_uart_apply_pid_command(const char *command)
         return 0U;
     }
     control_uart_print_pid();
+    return 1U;
+}
+
+static void control_uart_print_open_loop(void)
+{
+    printf(
+        "OL UP=%u DOWN=%u PSW10=%d NSW10=%d HD=%u DB10=%d VTH10=%d\r\n",
+        (unsigned int)ball_static_up_pulse_us,
+        (unsigned int)ball_static_down_pulse_us,
+        (int)(ball_static_positive_switch_mm * 10.0f),
+        (int)(ball_static_negative_switch_mm * 10.0f),
+        (unsigned int)ball_static_hold_delta_us,
+        (int)(ball_static_hold_deadband_mm * 10.0f),
+        (int)(ball_static_velocity_threshold_mm_s * 10.0f));
+}
+
+static uint8_t control_uart_apply_open_loop_command(
+    const char *command)
+{
+    float value;
+    uint16_t pulse_us;
+    uint16_t up_pulse_us = ball_static_up_pulse_us;
+    uint16_t down_pulse_us = ball_static_down_pulse_us;
+    uint16_t hold_delta_us = ball_static_hold_delta_us;
+    float positive_switch_mm =
+        ball_static_positive_switch_mm;
+    float negative_switch_mm =
+        ball_static_negative_switch_mm;
+    float hold_deadband_mm =
+        ball_static_hold_deadband_mm;
+    float velocity_threshold_mm_s =
+        ball_static_velocity_threshold_mm_s;
+
+    if (strcmp(command, "?") == 0 ||
+        strcmp(command, "OL?") == 0)
+    {
+        control_uart_print_open_loop();
+        return 1U;
+    }
+    if (strcmp(command, "OL RESET") == 0)
+    {
+        ball_static_reset_open_loop_config();
+        control_uart_print_open_loop();
+        return 1U;
+    }
+
+    if (strncmp(command, "UP", 2U) == 0)
+    {
+        if (servo_uart_parse_pulse(
+                command + 2, &pulse_us) == 0U)
+        {
+            return 0U;
+        }
+        up_pulse_us = pulse_us;
+    }
+    else if (strncmp(command, "DOWN", 4U) == 0)
+    {
+        if (servo_uart_parse_pulse(
+                command + 4, &pulse_us) == 0U)
+        {
+            return 0U;
+        }
+        down_pulse_us = pulse_us;
+    }
+    else if (strncmp(command, "PSW", 3U) == 0)
+    {
+        if (control_uart_parse_gain(
+                command + 3, &value) == 0U)
+        {
+            return 0U;
+        }
+        positive_switch_mm = value;
+    }
+    else if (strncmp(command, "NSW", 3U) == 0)
+    {
+        if (control_uart_parse_gain(
+                command + 3, &value) == 0U)
+        {
+            return 0U;
+        }
+        negative_switch_mm = value;
+    }
+    else if (strncmp(command, "HD", 2U) == 0)
+    {
+        if (control_uart_parse_gain(
+                command + 2, &value) == 0U ||
+            value < 0.0f)
+        {
+            return 0U;
+        }
+        hold_delta_us = (uint16_t)(value + 0.5f);
+    }
+    else if (strncmp(command, "DB", 2U) == 0)
+    {
+        if (control_uart_parse_gain(
+                command + 2, &value) == 0U)
+        {
+            return 0U;
+        }
+        hold_deadband_mm = value;
+    }
+    else if (strncmp(command, "VTH", 3U) == 0)
+    {
+        if (control_uart_parse_gain(
+                command + 3, &value) == 0U)
+        {
+            return 0U;
+        }
+        velocity_threshold_mm_s = value;
+    }
+    else
+    {
+        return 0U;
+    }
+
+    if (ball_static_set_open_loop_config(
+            up_pulse_us,
+            down_pulse_us,
+            positive_switch_mm,
+            negative_switch_mm,
+            hold_delta_us,
+            hold_deadband_mm,
+            velocity_threshold_mm_s) == 0U)
+    {
+        return 0U;
+    }
+    control_uart_print_open_loop();
     return 1U;
 }
 
@@ -470,7 +675,20 @@ void control_uart_service(void)
         {
             control_uart_error_count++;
             printf(
-                "ERR use PKP0..20, VKP0..20, VKI0..10, VMAX10..500\r\n");
+                "ERR PKP0..20 PKI0..5 VKP0..20 VKI0..10 VMAX10..500\r\n");
+            return;
+        }
+        control_uart_command_count++;
+        return;
+    }
+    if (mode == CONTROL_UART_OPEN_LOOP_TUNING)
+    {
+        if (control_uart_apply_open_loop_command(command) == 0U &&
+            control_uart_apply_pid_command(command) == 0U)
+        {
+            control_uart_error_count++;
+            printf(
+                "ERR use OL? or PID? for hybrid tuning help\r\n");
             return;
         }
         control_uart_command_count++;

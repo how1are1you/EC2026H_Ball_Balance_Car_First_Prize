@@ -196,12 +196,20 @@ Output  : none
 **************************************************************************/
 void OLED_ShowString(uint8_t x,uint8_t y,const uint8_t *p)
 {
-#define MAX_CHAR_POSX 122
-#define MAX_CHAR_POSY 58          
+#define MAX_CHAR_POSX 120
+#define MAX_CHAR_POSY 52
     while(*p!='\0')
-    {       
-        if(x>MAX_CHAR_POSX){x=0;y+=16;}
-        if(y>MAX_CHAR_POSY){y=x=0;OLED_Clear();}
+    {
+        /*
+         * A 12-pixel font occupies 8 horizontal pixels and 12 vertical
+         * pixels. Clip an overlong string instead of wrapping and calling
+         * OLED_Clear(), which used to erase the whole frame while it was
+         * still being composed.
+         */
+        if(x>MAX_CHAR_POSX || y>MAX_CHAR_POSY)
+        {
+            break;
+        }
         OLED_ShowChar(x,y,*p,12,1);	 
         x+=8;
         p++;

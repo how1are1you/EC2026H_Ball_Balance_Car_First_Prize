@@ -21,13 +21,14 @@ All rights reserved
 #include "IR_Module.h"
 #include "imu/imu.h"
 #include "ball_balance.h"
+#include "ball_static_task.h"
 #include "servo.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
-int Servo=1500;
+int Servo=SERVO_NEUTRAL_PULSE_US;
 Encoder OriginalEncoder; 					//编码器原始数据   
 Motor_parameter MotorA,MotorB;				//左右电机相关变量
 float Velocity_KP=400,Velocity_KI=300;	
@@ -56,12 +57,26 @@ void TIMER_0_INST_IRQHandler(void)
 				IR_Differential_OneLap_Reset();
 				TurnCalibration_Reset();
 				StraightTurnTest_Reset();
+				ball_static_task_reset();
 				lastRunMode = Run_Mode;
 			}
-			ball_balance_set_enabled(
-				(Menu_Active == 0U) &&
-				(Run_Mode == RUN_MODE_BALL_LAP ||
-				 Run_Mode == RUN_MODE_BALL_STATIC));
+			if (Menu_Active == 0U &&
+			    Run_Mode == RUN_MODE_BALL_STATIC)
+			{
+				ball_static_task_update();
+			}
+			if (Menu_Active == 0U &&
+			    Run_Mode == RUN_MODE_BALL_STATIC)
+			{
+				ball_balance_set_enabled(
+					ball_static_task_controller_enabled());
+			}
+			else
+			{
+				ball_balance_set_enabled(
+					(Menu_Active == 0U) &&
+					(Run_Mode == RUN_MODE_BALL_LAP));
+			}
 			if (Menu_Active != 0U)
 			{
 				control_uart_set_mode(CONTROL_UART_DISABLED);
@@ -72,6 +87,11 @@ void TIMER_0_INST_IRQHandler(void)
 			}
 			else if (Run_Mode == RUN_MODE_BALL_STATIC)
 			{
+				control_uart_set_mode(
+					CONTROL_UART_OPEN_LOOP_TUNING);
+			}
+			else if (Run_Mode == RUN_MODE_BALL_LAP)
+			{
 				control_uart_set_mode(CONTROL_UART_PID_TUNING);
 			}
 			else
@@ -80,6 +100,15 @@ void TIMER_0_INST_IRQHandler(void)
 			}
 			ball_balance_update();
 			Servo = (int)servo_get_pulse_us();
+			if (Run_Mode == RUN_MODE_BALL_STATIC)
+			{
+				Flag_Stop = 1;
+				Reset_Velocity_PI();
+				MotorA.Target_Encoder = 0.0f;
+				MotorB.Target_Encoder = 0.0f;
+				motor_set_pwm(0,0);
+				return;
+			}
 			if (Flag_Stop)
 			{
 				Reset_Velocity_PI();
@@ -302,6 +331,7 @@ void Key(void)
         IR_Differential_OneLap_Reset();
         TurnCalibration_Reset();
         StraightTurnTest_Reset();
+        ball_static_task_stop();
 
         if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
             Run_Mode == RUN_MODE_BALL_LAP ||
@@ -371,8 +401,19 @@ void Key(void)
             Flag_Stop = 1;
             imu_request_yaw_zero();
         }
-        else if (Run_Mode == RUN_MODE_BALL_STATIC ||
-                 Run_Mode == RUN_MODE_SERVO_ADJUST)
+        else if (Run_Mode == RUN_MODE_BALL_STATIC)
+        {
+            Flag_Stop = 1;
+            if (ball_static_task_is_running() != 0U)
+            {
+                ball_static_task_stop();
+            }
+            else
+            {
+                (void)ball_static_task_start();
+            }
+        }
+        else if (Run_Mode == RUN_MODE_SERVO_ADJUST)
         {
             Flag_Stop = 1;
         }

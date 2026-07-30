@@ -20,6 +20,7 @@ All rights reserved
 #include "show.h"
 #include "IR_Module.h"
 #include "ball_balance.h"
+#include "ball_static_task.h"
 #include "imu/imu.h"
 #include "servo.h"
 #include "straight_turn_test.h"
@@ -503,83 +504,120 @@ static void straight_turn_oled_show(void)
     OLED_Refresh_Gram();
 }
 
+static const char *ball_static_state_text(void)
+{
+    switch (ball_static_state)
+    {
+        case BALL_STATIC_READY:
+            return (ball_static_ready != 0U) ?
+                "READY" : "CENTER";
+        case BALL_STATIC_MOVE_POS:
+            return "TO+5";
+        case BALL_STATIC_HOLD_POS:
+            return "HOLD+";
+        case BALL_STATIC_MOVE_NEG:
+            return "TO-5";
+        case BALL_STATIC_HOLD_NEG:
+            return "HOLD-";
+        case BALL_STATIC_PID_HOLD:
+            return "PID-5";
+        case BALL_STATIC_DONE:
+            return "DONE";
+        case BALL_STATIC_FAULT:
+            return "FAULT";
+        default:
+            return "?";
+    }
+}
+
+static void ball_static_show_time(uint8_t y)
+{
+    uint32_t elapsed_ms = ball_static_elapsed_ms;
+    uint32_t seconds = elapsed_ms / 1000U;
+    uint32_t milliseconds = elapsed_ms % 1000U;
+
+    if (seconds > 9U)
+    {
+        seconds = 9U;
+        milliseconds = 999U;
+    }
+
+    oled_show_text(0, y, "TIME:");
+    OLED_ShowNumber(34, y, seconds, 1, 12);
+    OLED_ShowChar(40, y, '.', 12, 1);
+    OLED_ShowNumber(46, y, milliseconds, 3, 12);
+    oled_show_text(66, y, "s");
+}
+
 static void ball_static_oled_show(void)
 {
-    float position_mm = vision_ball_position_mm;
-    float velocity_mm_s = vision_ball_velocity_mm_s;
-    float target_velocity_mm_s =
-        ball_balance_target_velocity_mm_s;
-    uint32_t age_ms =
-        (uint32_t)((uint32_t)tick_ms - vision_ball_last_update_ms);
-    uint8_t valid = vision_ball_position_valid;
     uint8_t position_end_x;
-    const char *status_text;
-
-    if (valid == 0U)
-    {
-        status_text = "WAIT";
-    }
-    else if (age_ms <= VISION_UART_LIVE_TIMEOUT_MS)
-    {
-        status_text = "LIVE";
-    }
-    else
-    {
-        status_text = "STALE";
-    }
-
-    if (age_ms > 99999U)
-    {
-        age_ms = 99999U;
-    }
+    uint32_t positive_error =
+        (uint32_t)(ball_static_positive_max_error_mm + 0.5f);
+    uint32_t negative_error =
+        (uint32_t)(ball_static_negative_max_error_mm + 0.5f);
 
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
-    oled_show_text(0, 0, "STATIC PID:");
-    oled_show_text(72, 0, status_text);
+    oled_show_text(0, 0, "STATIC:");
+    oled_show_text(48, 0, ball_static_state_text());
 
-    oled_show_text(0, 10, "POS:");
-    if (valid != 0U)
-    {
-        position_end_x = vision_show_position_mm(30, 10, position_mm);
-        oled_show_text((uint8_t)(position_end_x + 4U), 10, "mm");
-    }
-    else
-    {
-        oled_show_text(30, 10, "--");
-    }
+    ball_static_show_time(10);
 
-    oled_show_text(0, 20, "VEL:");
-    if (valid != 0U)
+    oled_show_text(0, 20, "POS:");
+    if (vision_ball_position_valid != 0U)
     {
-        position_end_x =
-            vision_show_position_mm(30, 20, velocity_mm_s);
-        oled_show_text((uint8_t)(position_end_x + 4U), 20, "mm/s");
+        position_end_x = vision_show_position_mm(
+            30, 20, vision_ball_position_mm);
+        oled_show_text((uint8_t)(position_end_x + 4U), 20, "mm");
     }
     else
     {
         oled_show_text(30, 20, "--");
     }
 
-    oled_show_text(0, 30, "VT:");
+    oled_show_text(0, 30, "REF:");
     position_end_x =
-        vision_show_position_mm(24, 30, target_velocity_mm_s);
-    oled_show_text((uint8_t)(position_end_x + 4U), 30, "mm/s");
+        vision_show_position_mm(30, 30, ball_static_target_mm);
+    oled_show_text((uint8_t)(position_end_x + 4U), 30, "mm");
 
-    oled_show_text(0, 40, "AGE:");
-    if (valid != 0U)
+    oled_show_text(0, 40, "VEL:");
+    if (vision_ball_position_valid != 0U)
     {
-        OLED_ShowNumber(30, 40, age_ms, 5, 12);
-        oled_show_text(66, 40, "ms");
+        position_end_x = vision_show_position_mm(
+            30, 40, vision_ball_velocity_mm_s);
+        oled_show_text((uint8_t)(position_end_x + 4U), 40, "mm/s");
     }
     else
     {
         oled_show_text(30, 40, "--");
     }
 
-    oled_show_text(0, 50, "PWM:");
-    OLED_ShowNumber(
-        24, 50, ball_balance_servo_pulse_us, 4, 12);
-    oled_show_text(54, 50, "HOLD:MENU");
+    if (ball_static_state == BALL_STATIC_FAULT)
+    {
+        oled_show_text(0, 50, "FAULT:");
+        OLED_ShowNumber(42, 50, ball_static_fault, 1, 12);
+        oled_show_text(54, 50, "1:RESET");
+    }
+    else if (ball_static_state == BALL_STATIC_DONE)
+    {
+        oled_show_text(0, 50, "E+:");
+        OLED_ShowNumber(18, 50, positive_error, 1, 12);
+        oled_show_text(30, 50, "E-:");
+        OLED_ShowNumber(48, 50, negative_error, 1, 12);
+        oled_show_text(60, 50, "mm");
+    }
+    else if (ball_static_state == BALL_STATIC_READY)
+    {
+        oled_show_text(
+            0, 50,
+            (ball_static_ready != 0U) ?
+                "1:START HOLD" :
+                "PUT BALL AT O");
+    }
+    else
+    {
+        oled_show_text(0, 50, "1:STOP HOLD");
+    }
     OLED_Refresh_Gram();
 }
 
@@ -646,7 +684,7 @@ static void menu_oled_show(void)
 
     menu_show_item(0, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
     menu_show_item(12, RUN_MODE_BALL_LAP, "BALL LAP");
-    menu_show_item(24, RUN_MODE_BALL_STATIC, "STATIC PID");
+    menu_show_item(24, RUN_MODE_BALL_STATIC, "STATIC HYB");
     menu_show_item(36, RUN_MODE_SERVO_ADJUST, "SERVO ADJ");
     menu_show_item(48, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
 

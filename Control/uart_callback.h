@@ -21,7 +21,8 @@ typedef enum
 {
     CONTROL_UART_DISABLED = 0,
     CONTROL_UART_SERVO_ADJUST,
-    CONTROL_UART_PID_TUNING
+    CONTROL_UART_PID_TUNING,
+    CONTROL_UART_OPEN_LOOP_TUNING
 } control_uart_mode_t;
 
 extern volatile uint32_t control_uart_command_count;
