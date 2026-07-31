@@ -70,6 +70,7 @@ static void menu_select_mode(uint8_t mode)
 void TIMER_0_INST_IRQHandler(void)
 {
     static int lastRunMode = -1;
+    imu_sample_t sample;
 
     if(DL_TimerA_getPendingInterrupt(TIMER_0_INST))
     {
@@ -119,12 +120,27 @@ void TIMER_0_INST_IRQHandler(void)
 					(Menu_Active == 0U) &&
 					(Run_Mode == RUN_MODE_BALL_LAP));
 			}
-			ball_balance_set_vehicle_acceleration(
-				(Menu_Active == 0U &&
-				 (Run_Mode == RUN_MODE_BALL_LAP ||
-				  Run_Mode == RUN_MODE_BALL_HOLD_LAP) &&
-				 Flag_Stop == 0U) ?
-					StraightTurnStartupAccelerationMps2 : 0.0f);
+			if (Menu_Active == 0U &&
+				(Run_Mode == RUN_MODE_BALL_LAP ||
+				 Run_Mode == RUN_MODE_BALL_HOLD_LAP) &&
+				Flag_Stop == 0U)
+			{
+				imu_get_snapshot(&sample);
+				if (sample.status == IMU_STATUS_READY &&
+					sample.valid != 0U)
+				{
+					ball_balance_set_vehicle_acceleration_from_raw_ay(
+						sample.accel_g[1]);
+				}
+				else
+				{
+					ball_balance_set_vehicle_acceleration(0.0f);
+				}
+			}
+			else
+			{
+				ball_balance_set_vehicle_acceleration(0.0f);
+			}
 			if (Menu_Active != 0U)
 			{
 				control_uart_set_mode(CONTROL_UART_DISABLED);

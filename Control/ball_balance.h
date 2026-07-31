@@ -59,6 +59,8 @@ extern volatile ball_balance_status_t ball_balance_status;
 void ball_balance_init(void);
 void ball_balance_set_enabled(uint8_t enabled);
 void ball_balance_set_vehicle_acceleration(float acceleration_mps2);
+void ball_balance_set_vehicle_acceleration_from_raw_ay(
+    float raw_ay_g);
 void ball_balance_set_reference(
     float position_mm,
     float velocity_mm_s);

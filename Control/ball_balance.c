@@ -196,6 +196,13 @@ void ball_balance_set_vehicle_acceleration(float acceleration_mps2)
         BALL_BALANCE_VEHICLE_ACCELERATION_LIMIT_MPS2);
 }
 
+void ball_balance_set_vehicle_acceleration_from_raw_ay(
+    float raw_ay_g)
+{
+    ball_balance_set_vehicle_acceleration(
+        raw_ay_g * 9.80665f);
+}
+
 void ball_balance_set_reference(
     float position_mm,
     float velocity_mm_s)
