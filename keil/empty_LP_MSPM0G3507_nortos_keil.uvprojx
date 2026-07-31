@@ -669,6 +669,11 @@
               <FileType>1</FileType>
               <FilePath>..\Control\straight_turn_test.c</FilePath>
             </File>
+            <File>
+              <FileName>startup_motion_gate.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\startup_motion_gate.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

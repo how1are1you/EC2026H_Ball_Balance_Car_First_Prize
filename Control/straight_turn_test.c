@@ -3,6 +3,7 @@
 #include "control.h"
 #include "IR_Module.h"
 #include "imu/imu.h"
+#include "startup_motion_gate.h"
 #include "turn_calibration.h"
 
 #include <math.h>
@@ -53,6 +54,7 @@ static uint16_t straight_turn_imu_stale_ticks;
 static uint16_t straight_turn_line_lost_ticks;
 static uint32_t straight_turn_elapsed_ticks;
 static uint32_t straight_turn_post_elapsed_ticks;
+static startup_motion_gate_t straight_turn_startup_motion_gate;
 static float straight_turn_target_speed_mps =
     STRAIGHT_TURN_FAST_SPEED_MPS;
 static float straight_turn_acceleration_mps2 =
@@ -181,6 +183,7 @@ static float straight_turn_heading_omega(
 static void straight_turn_command_straight(void)
 {
     float previous_speed_mps = StraightTurnCommandSpeed;
+    uint8_t startup_motion_detected = 0U;
     float command_omega =
         straight_turn_heading_omega(
             straight_turn_straight_heading_yaw,
@@ -198,7 +201,15 @@ static void straight_turn_command_straight(void)
     {
         StraightTurnCommandSpeed = straight_turn_target_speed_mps;
     }
+    if (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1)
+    {
+        startup_motion_detected = startup_motion_gate_update(
+            &straight_turn_startup_motion_gate,
+            MotorA.Current_Encoder,
+            MotorB.Current_Encoder);
+    }
     if (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1 &&
+        startup_motion_detected != 0U &&
         previous_speed_mps < straight_turn_target_speed_mps)
     {
         StraightTurnStartupAccelerationMps2 =
@@ -468,6 +479,8 @@ void StraightTurnTest_Reset(void)
     straight_turn_line_lost_ticks = 0U;
     straight_turn_elapsed_ticks = 0U;
     straight_turn_post_elapsed_ticks = 0U;
+    startup_motion_gate_reset(
+        &straight_turn_startup_motion_gate);
     straight_turn_post_lap_target_m = 0.0f;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
