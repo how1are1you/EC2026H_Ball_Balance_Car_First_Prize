@@ -7,13 +7,15 @@
 #include <stdio.h>
 
 #define BALL_STATIC_POS_TARGET_MM (50.0f)
-#define BALL_STATIC_NEG_TARGET_MM (-56.0f)
+#define BALL_STATIC_NEG_TARGET_MM (-50.0f)
 #define BALL_STATIC_START_TOLERANCE_MM (5.0f)
-#define BALL_STATIC_NEG_REACHED_MM (-45.0f)
-#define BALL_STATIC_PID_ENTRY_MM (-40.0f)
-#define BALL_STATIC_REVERSAL_VELOCITY_MM_S (5.0f)
 #define BALL_STATIC_READY_TIME_MS (200UL)
 #define BALL_STATIC_VISION_TIMEOUT_MS (200UL)
+#define BALL_STATIC_SETTLE_TOLERANCE_MM (5.0f)
+#define BALL_STATIC_SETTLE_VELOCITY_MM_S (10.0f)
+#define BALL_STATIC_POS_SETTLE_TIME_MS (100UL)
+#define BALL_STATIC_NEG_SETTLE_TIME_MS (300UL)
+#define BALL_STATIC_TOTAL_TIMEOUT_MS (5000UL)
 #define BALL_STATIC_DEFAULT_UP_PULSE_US (1550U)
 #define BALL_STATIC_DEFAULT_DOWN_PULSE_US (1050U)
 #define BALL_STATIC_DEFAULT_HOLD_DELTA_US (30U)
@@ -52,6 +54,7 @@ volatile float ball_static_velocity_threshold_mm_s =
 
 static uint32_t task_start_ms;
 static uint32_t ready_start_ms;
+static uint32_t settle_start_ms;
 static float positive_peak_mm;
 
 static float absolute_float(float value)
@@ -64,6 +67,19 @@ static uint8_t vision_is_fresh(uint32_t now_ms)
     return (vision_ball_position_valid != 0U) &&
            ((uint32_t)(now_ms - vision_ball_last_update_ms) <=
             BALL_STATIC_VISION_TIMEOUT_MS);
+}
+
+static uint8_t target_is_stable(
+    float position_mm,
+    float velocity_mm_s,
+    float target_mm)
+{
+    return (absolute_float(position_mm - target_mm) <=
+            BALL_STATIC_SETTLE_TOLERANCE_MM &&
+            absolute_float(velocity_mm_s) <=
+            BALL_STATIC_SETTLE_VELOCITY_MM_S)
+               ? 1U
+               : 0U;
 }
 
 static void apply_pulse(uint16_t pulse_us)
@@ -168,6 +184,7 @@ void ball_static_task_reset(void)
     ball_static_target_mm = 0.0f;
     task_start_ms = 0U;
     ready_start_ms = 0U;
+    settle_start_ms = 0U;
     positive_peak_mm = 0.0f;
     ball_balance_set_reference(0.0f, 0.0f);
     apply_pulse(SERVO_NEUTRAL_PULSE_US);
@@ -191,6 +208,7 @@ uint8_t ball_static_task_start(void)
 
     task_start_ms = now_ms;
     positive_peak_mm = vision_ball_position_mm;
+    settle_start_ms = 0U;
     ball_static_elapsed_ms = 0U;
     ball_static_positive_max_error_mm = 0.0f;
     ball_static_negative_max_error_mm = 0.0f;
@@ -198,7 +216,7 @@ uint8_t ball_static_task_start(void)
     ball_static_ready = 0U;
     ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
     ball_static_state = BALL_STATIC_MOVE_POS;
-    apply_pulse(ball_static_up_pulse_us);
+    ball_balance_set_reference(BALL_STATIC_POS_TARGET_MM, 0.0f);
     return 1U;
 }
 
@@ -209,7 +227,11 @@ void ball_static_task_stop(void)
 
 uint8_t ball_static_task_controller_enabled(void)
 {
-    return (ball_static_state == BALL_STATIC_PID_HOLD ||
+    return (ball_static_state == BALL_STATIC_MOVE_POS ||
+            ball_static_state == BALL_STATIC_HOLD_POS ||
+            ball_static_state == BALL_STATIC_MOVE_NEG ||
+            ball_static_state == BALL_STATIC_HOLD_NEG ||
+            ball_static_state == BALL_STATIC_PID_HOLD ||
             ball_static_state == BALL_STATIC_DONE)
                ? 1U
                : 0U;
@@ -291,8 +313,12 @@ void ball_static_task_update(void)
     }
 
     ball_static_elapsed_ms = now_ms - task_start_ms;
-    if (ball_static_state != BALL_STATIC_PID_HOLD &&
-        ball_static_state != BALL_STATIC_DONE &&
+    if (ball_static_elapsed_ms > BALL_STATIC_TOTAL_TIMEOUT_MS)
+    {
+        set_fault(BALL_STATIC_FAULT_TOTAL_TIMEOUT, now_ms);
+        return;
+    }
+    if (ball_static_state != BALL_STATIC_DONE &&
         vision_is_fresh(now_ms) == 0U)
     {
         set_fault(BALL_STATIC_FAULT_VISION, now_ms);
@@ -303,74 +329,92 @@ void ball_static_task_update(void)
     {
     case BALL_STATIC_MOVE_POS:
         ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
-        apply_pulse(ball_static_up_pulse_us);
-        if (position_mm >= ball_static_positive_switch_mm)
+        ball_balance_set_reference(
+            BALL_STATIC_POS_TARGET_MM, 0.0f);
+        if (position_mm > positive_peak_mm)
         {
             positive_peak_mm = position_mm;
+        }
+        if (target_is_stable(
+                position_mm,
+                velocity_mm_s,
+                BALL_STATIC_POS_TARGET_MM) != 0U)
+        {
             ball_static_state = BALL_STATIC_HOLD_POS;
-            apply_pulse(ball_static_down_pulse_us);
+            settle_start_ms = now_ms;
         }
         break;
 
     case BALL_STATIC_HOLD_POS:
         ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
-        apply_pulse(ball_static_down_pulse_us);
+        ball_balance_set_reference(
+            BALL_STATIC_POS_TARGET_MM, 0.0f);
         if (position_mm > positive_peak_mm)
         {
             positive_peak_mm = position_mm;
         }
-        if (velocity_mm_s <=
-            -BALL_STATIC_REVERSAL_VELOCITY_MM_S)
+        if (target_is_stable(
+                position_mm,
+                velocity_mm_s,
+                BALL_STATIC_POS_TARGET_MM) == 0U)
+        {
+            ball_static_state = BALL_STATIC_MOVE_POS;
+            settle_start_ms = 0U;
+        }
+        else if ((uint32_t)(now_ms - settle_start_ms) >=
+                 BALL_STATIC_POS_SETTLE_TIME_MS)
         {
             endpoint_error_mm = absolute_float(
-                positive_peak_mm -
-                BALL_STATIC_POS_TARGET_MM);
+                positive_peak_mm - BALL_STATIC_POS_TARGET_MM);
             ball_static_positive_max_error_mm =
                 endpoint_error_mm;
             ball_static_target_mm =
                 BALL_STATIC_NEG_TARGET_MM;
             ball_static_state = BALL_STATIC_MOVE_NEG;
-        }
-        break;
-
-    case BALL_STATIC_MOVE_NEG:
-        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
-        apply_pulse(ball_static_down_pulse_us);
-        if (position_mm <= ball_static_negative_switch_mm)
-        {
-            ball_static_state = BALL_STATIC_HOLD_NEG;
-            apply_pulse(ball_static_up_pulse_us);
-        }
-        break;
-
-    case BALL_STATIC_HOLD_NEG:
-        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
-        apply_pulse(ball_static_up_pulse_us);
-        if (position_mm <= BALL_STATIC_PID_ENTRY_MM)
-        {
-            ball_static_state = BALL_STATIC_PID_HOLD;
+            settle_start_ms = 0U;
             ball_balance_set_reference(
                 BALL_STATIC_NEG_TARGET_MM, 0.0f);
         }
         break;
 
-    case BALL_STATIC_PID_HOLD:
+    case BALL_STATIC_MOVE_NEG:
+        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+        ball_balance_set_reference(
+            BALL_STATIC_NEG_TARGET_MM, 0.0f);
+        if (target_is_stable(
+                position_mm,
+                velocity_mm_s,
+                BALL_STATIC_NEG_TARGET_MM) != 0U)
+        {
+            ball_static_state = BALL_STATIC_HOLD_NEG;
+            settle_start_ms = now_ms;
+        }
+        break;
+
+    case BALL_STATIC_HOLD_NEG:
+        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+        ball_balance_set_reference(
+            BALL_STATIC_NEG_TARGET_MM, 0.0f);
+        if (target_is_stable(
+                position_mm,
+                velocity_mm_s,
+                BALL_STATIC_NEG_TARGET_MM) == 0U)
+        {
+            ball_static_state = BALL_STATIC_MOVE_NEG;
+            settle_start_ms = 0U;
+        }
+        else if ((uint32_t)(now_ms - settle_start_ms) >=
+                 BALL_STATIC_NEG_SETTLE_TIME_MS)
+        {
+            ball_static_state = BALL_STATIC_DONE;
+            settle_start_ms = 0U;
+        }
+        break;
+
     case BALL_STATIC_DONE:
         ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
         ball_balance_set_reference(
             BALL_STATIC_NEG_TARGET_MM, 0.0f);
-        if (vision_is_fresh(now_ms) != 0U &&
-            position_mm <= BALL_STATIC_NEG_REACHED_MM)
-        {
-            endpoint_error_mm = absolute_float(
-                BALL_STATIC_NEG_TARGET_MM - position_mm);
-            if (endpoint_error_mm >
-                ball_static_negative_max_error_mm)
-            {
-                ball_static_negative_max_error_mm =
-                    endpoint_error_mm;
-            }
-        }
         break;
 
     default:
