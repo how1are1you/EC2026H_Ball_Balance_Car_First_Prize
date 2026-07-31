@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\empty_LP_MSPM0G3507_nortos_keil.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\empty_LP_MSPM0G3507_nortos_keil.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6240002: Last Updated: Fri Jul 31 17:34:05 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6240002: Last Updated: Sat Aug  1 01:12:40 2026
 <BR><P>
 <H3>Maximum Stack Usage =        720 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -1693,7 +1693,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_mspm0g350x_uvision.o(RESET)
 </UL>
-<P><STRONG><a name="[124]"></a>ball_balance_init</STRONG> (Thumb, 76 bytes, Stack size 16 bytes, ball_balance.o(.text.ball_balance_init))
+<P><STRONG><a name="[124]"></a>ball_balance_init</STRONG> (Thumb, 80 bytes, Stack size 16 bytes, ball_balance.o(.text.ball_balance_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 100<LI>Call Chain = ball_balance_init &rArr; set_control_pulse &rArr; quantize_control_pulse &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[126]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;set_control_pulse
@@ -1702,7 +1702,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[1e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[127]"></a>ball_balance_reset_pid_gains</STRONG> (Thumb, 24 bytes, Stack size 16 bytes, ball_balance.o(.text.ball_balance_reset_pid_gains))
+<P><STRONG><a name="[127]"></a>ball_balance_reset_pid_gains</STRONG> (Thumb, 28 bytes, Stack size 16 bytes, ball_balance.o(.text.ball_balance_reset_pid_gains))
 <BR><BR>[Stack]<UL><LI>Max Depth = 48<LI>Call Chain = ball_balance_reset_pid_gains &rArr; ball_balance_set_cascade_gains
 </UL>
 <BR>[Calls]<UL><LI><a href="#[128]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ball_balance_set_cascade_gains
@@ -1926,7 +1926,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[91]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Key
 </UL>
 
-<P><STRONG><a name="[10b]"></a>ball_static_task_update</STRONG> (Thumb, 600 bytes, Stack size 40 bytes, ball_static_task.o(.text.ball_static_task_update))
+<P><STRONG><a name="[10b]"></a>ball_static_task_update</STRONG> (Thumb, 604 bytes, Stack size 40 bytes, ball_static_task.o(.text.ball_static_task_update))
 <BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = ball_static_task_update &rArr; set_fault &rArr; apply_pulse &rArr; servo_set_pulse_us &rArr; DL_Timer_setCaptureCompareValue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_fcmple
