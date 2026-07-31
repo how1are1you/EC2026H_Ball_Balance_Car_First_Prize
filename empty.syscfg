@@ -46,7 +46,7 @@ divider7.divideValue = 2;
 
 const divider9       = system.clockTree["UDIV"];
 
-divider9.divideValue = 2;
+03divider9.divideValue = 2;
 
 const multiplier2         = system.clockTree["PLL_QDIV"];
 multiplier2.multiplyValue = 5;
