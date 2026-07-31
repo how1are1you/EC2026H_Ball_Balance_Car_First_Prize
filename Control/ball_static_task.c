@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #define BALL_STATIC_POS_TARGET_MM (50.0f)
-#define BALL_STATIC_NEG_TARGET_MM (-50.0f)
+#define BALL_STATIC_NEG_TARGET_MM (-55.0f)
 #define BALL_STATIC_START_TOLERANCE_MM (5.0f)
 #define BALL_STATIC_READY_TIME_MS (200UL)
 #define BALL_STATIC_VISION_TIMEOUT_MS (200UL)
@@ -15,7 +15,6 @@
 #define BALL_STATIC_SETTLE_VELOCITY_MM_S (10.0f)
 #define BALL_STATIC_POS_SETTLE_TIME_MS (100UL)
 #define BALL_STATIC_NEG_SETTLE_TIME_MS (300UL)
-#define BALL_STATIC_TOTAL_TIMEOUT_MS (5000UL)
 #define BALL_STATIC_DEFAULT_UP_PULSE_US (1550U)
 #define BALL_STATIC_DEFAULT_DOWN_PULSE_US (1050U)
 #define BALL_STATIC_DEFAULT_HOLD_DELTA_US (30U)
@@ -313,11 +312,6 @@ void ball_static_task_update(void)
     }
 
     ball_static_elapsed_ms = now_ms - task_start_ms;
-    if (ball_static_elapsed_ms > BALL_STATIC_TOTAL_TIMEOUT_MS)
-    {
-        set_fault(BALL_STATIC_FAULT_TOTAL_TIMEOUT, now_ms);
-        return;
-    }
     if (ball_static_state != BALL_STATIC_DONE &&
         vision_is_fresh(now_ms) == 0U)
     {
