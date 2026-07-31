@@ -42,6 +42,8 @@
 ".\objects\show.o"
 ".\objects\datascope_dp.o"
 ".\objects\uart_callback.o"
+".\objects\vision_protocol.o"
+".\objects\ball_state_observer.o"
 ".\objects\ball_balance.o"
 ".\objects\ball_position_capture.o"
 ".\objects\ball_hold_lap.o"

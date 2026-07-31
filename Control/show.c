@@ -21,6 +21,7 @@ All rights reserved
 #include "IR_Module.h"
 #include "ball_balance.h"
 #include "ball_hold_lap.h"
+#include "ball_state_observer.h"
 #include "ball_static_task.h"
 #include "imu/imu.h"
 #include "servo.h"
@@ -606,13 +607,11 @@ static void ball_hold_lap_oled_show(void)
 
     if (ball_hold_lap_state == BALL_HOLD_LAP_READY)
     {
-        if (vision_ball_position_valid != 0U &&
-            (uint32_t)(tick_ms -
-                       vision_ball_last_update_ms) <=
-                BALL_HOLD_LAP_VISION_TIMEOUT_MS)
+        if (ball_state_observer.valid != 0U)
         {
             ball_hold_show_position(
-                20, "POS:", vision_ball_position_mm);
+                20, "POS:",
+                ball_state_observer.position_mm);
         }
         else
         {
@@ -753,10 +752,10 @@ static void ball_static_oled_show(void)
     ball_static_show_time(10);
 
     oled_show_text(0, 20, "POS:");
-    if (vision_ball_position_valid != 0U)
+    if (ball_state_observer.valid != 0U)
     {
         position_end_x = vision_show_position_mm(
-            30, 20, vision_ball_position_mm);
+            30, 20, ball_state_observer.position_mm);
         oled_show_text((uint8_t)(position_end_x + 4U), 20, "mm");
     }
     else
@@ -770,10 +769,10 @@ static void ball_static_oled_show(void)
     oled_show_text((uint8_t)(position_end_x + 4U), 30, "mm");
 
     oled_show_text(0, 40, "VEL:");
-    if (vision_ball_position_valid != 0U)
+    if (ball_state_observer.valid != 0U)
     {
         position_end_x = vision_show_position_mm(
-            30, 40, vision_ball_velocity_mm_s);
+            30, 40, ball_state_observer.velocity_mm_s);
         oled_show_text((uint8_t)(position_end_x + 4U), 40, "mm/s");
     }
     else
@@ -963,16 +962,16 @@ void oled_show(void)
      memset(OLED_GRAM,0, 128*8*sizeof(u8)); //GRAM清零但不立即刷新，防止花屏
         //=============第一行显示小车模式=======================//
 	
-             if(Car_Mode==0)   OLED_ShowString(0,0,"Mec ");
-        else if(Car_Mode==1)   OLED_ShowString(0,0,"Omni");
-        else if(Car_Mode==2)   OLED_ShowString(0,0,"AKM ");
-        else if(Car_Mode==3)   OLED_ShowString(0,0,"Diff");
-        else if(Car_Mode==4)   OLED_ShowString(0,0,"4WD ");
-		else if(Car_Mode==5)   OLED_ShowString(0,0,"Tank");
-		OLED_ShowString(0,10,"Servo: ");
+             if(Car_Mode==0)   oled_show_text(0,0,"Mec ");
+        else if(Car_Mode==1)   oled_show_text(0,0,"Omni");
+        else if(Car_Mode==2)   oled_show_text(0,0,"AKM ");
+        else if(Car_Mode==3)   oled_show_text(0,0,"Diff");
+        else if(Car_Mode==4)   oled_show_text(0,0,"4WD ");
+		else if(Car_Mode==5)   oled_show_text(0,0,"Tank");
+		oled_show_text(0,10,"Servo: ");
 		OLED_ShowNumber(60,10, myabs((int)(Servo)),4,12);
 	
-	    if(Run_Mode==0)   OLED_ShowString(90,0,"APP");
+	    if(Run_Mode==0)   oled_show_text(90,0,"APP");
 		OLED_ShowChar(0,20,'L',12,1);
 		OLED_ShowChar(6,20,(MotorA.Motor_Pwm < 0) ? '-' : '+',12,1);
 		OLED_ShowNumber(12,20,myabs((int)MotorA.Motor_Pwm),4,12);
@@ -983,37 +982,37 @@ void oled_show(void)
 		OLED_ShowChar(102,20,'W',12,1);
 		OLED_ShowChar(108,20,'M',12,1);
         //=============第四行显示左编码器PWM与读数=======================//
-                              OLED_ShowString(00,30,"L");
-        if((MotorA.Target_Encoder*1000)<0)          OLED_ShowString(16,30,"-"),
+                              oled_show_text(00,30,"L");
+        if((MotorA.Target_Encoder*1000)<0)          oled_show_text(16,30,"-"),
                                                   OLED_ShowNumber(26,30,myabs((int)(MotorA.Target_Encoder*1000)),4,12);
-        if((MotorA.Target_Encoder*1000)>=0)       OLED_ShowString(16,30,"+"),
+        if((MotorA.Target_Encoder*1000)>=0)       oled_show_text(16,30,"+"),
                               OLED_ShowNumber(26,30,myabs((int)(MotorA.Target_Encoder*1000)),4,12);
 
-        if(MotorA.Current_Encoder<0)   OLED_ShowString(60,30,"-");
-        if(MotorA.Current_Encoder>=0)    OLED_ShowString(60,30,"+");
+        if(MotorA.Current_Encoder<0)   oled_show_text(60,30,"-");
+        if(MotorA.Current_Encoder>=0)    oled_show_text(60,30,"+");
                               OLED_ShowNumber(68,30,myabs((int)(MotorA.Current_Encoder*1000)),4,12);
-                                                    OLED_ShowString(96,30,"mm/s");
+                                                    oled_show_text(96,30,"mm/s");
 
         //=============第五行显示右编码器PWM与读数=======================//
-                              OLED_ShowString(00,40,"R");
-        if((MotorB.Target_Encoder*1000)<0)         OLED_ShowString(16,40,"-"),
+                              oled_show_text(00,40,"R");
+        if((MotorB.Target_Encoder*1000)<0)         oled_show_text(16,40,"-"),
                                                     OLED_ShowNumber(26,40,myabs((int)(MotorB.Target_Encoder*1000)),4,12);
-        if((MotorB.Target_Encoder*1000)>=0)    		OLED_ShowString(16,40,"+"),
+        if((MotorB.Target_Encoder*1000)>=0)    		oled_show_text(16,40,"+"),
 													OLED_ShowNumber(26,40,myabs((int)(MotorB.Target_Encoder*1000)),4,12);
 
-        if(MotorB.Current_Encoder<0)    OLED_ShowString(60,40,"-");
-        if(MotorB.Current_Encoder>=0)   OLED_ShowString(60,40,"+");
+        if(MotorB.Current_Encoder<0)    oled_show_text(60,40,"-");
+        if(MotorB.Current_Encoder>=0)   oled_show_text(60,40,"+");
                               OLED_ShowNumber(68,40,myabs((int)(MotorB.Current_Encoder*1000)),4,12);
-                                                    OLED_ShowString(96,40,"mm/s");
+                                                    oled_show_text(96,40,"mm/s");
 
         //=============第六行显示电压与电机开关=======================//
-                              OLED_ShowString(0,50,"V");
-                                                    OLED_ShowString(30,50,".");
-                                                    OLED_ShowString(64,50,"V");
+                              oled_show_text(0,50,"V");
+                                                    oled_show_text(30,50,".");
+                                                    oled_show_text(64,50,"V");
                                                     OLED_ShowNumber(19,50,(int)Voltage,2,12);
                                                     OLED_ShowNumber(39,50,(u16)(Voltage*10)%10,2,12);
-        if(Flag_Stop)         OLED_ShowString(95,50,"OFF");
-        if(!Flag_Stop)        OLED_ShowString(95,50,"ON ");
+        if(Flag_Stop)         oled_show_text(95,50,"OFF");
+        if(!Flag_Stop)        oled_show_text(95,50,"ON ");
 
         //=============刷新=======================//
         OLED_Refresh_Gram();

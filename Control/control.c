@@ -22,10 +22,12 @@ All rights reserved
 #include "imu/imu.h"
 #include "ball_balance.h"
 #include "ball_hold_lap.h"
+#include "ball_state_observer.h"
 #include "ball_static_task.h"
 #include "servo.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
+#include "uart_callback.h"
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
@@ -48,6 +50,29 @@ const menu_item_t Menu_Items[MENU_MODE_COUNT] =
 	{RUN_MODE_IMU_DEBUG, "IMU DEBUG"}
 };
 static u8 Reset_Left_PI, Reset_Right_PI;
+
+static void update_ball_state_observer(uint32_t now_ms)
+{
+    ball_vision_measurement_t measurement;
+    uint32_t frame_before;
+    uint32_t frame_after;
+
+    do
+    {
+        frame_before = vision_ball_frame_count;
+        measurement.position_mm = vision_ball_position_mm;
+        measurement.velocity_mm_s = vision_ball_velocity_mm_s;
+        measurement.sample_ms = vision_ball_last_update_ms;
+        measurement.valid = vision_ball_position_valid;
+        frame_after = vision_ball_frame_count;
+    } while (frame_before != frame_after);
+
+    measurement.frame_count = frame_after;
+    ball_state_observer_update(
+        &ball_state_observer,
+        &measurement,
+        now_ms);
+}
 
 static void menu_select_mode(uint8_t mode)
 {
@@ -81,6 +106,7 @@ void TIMER_0_INST_IRQHandler(void)
 			LED_Flash(100);
 			Get_Velocity_From_Encoder(Get_Encoder_countA,Get_Encoder_countB);
 			Get_Encoder_countA=Get_Encoder_countB=0;
+			update_ball_state_observer((uint32_t)tick_ms);
 			if (Run_Mode != lastRunMode)
 			{
 				Reset_Velocity_PI();

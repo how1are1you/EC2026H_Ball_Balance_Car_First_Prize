@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define SERVO_MIN_PULSE_US (500U)
-#define SERVO_NEUTRAL_PULSE_US (1250U)
+#define SERVO_NEUTRAL_PULSE_US (1300U)
 #define SERVO_MAX_PULSE_US (2500U)
 
 #define SERVO_CONTROL_MIN_PULSE_US (500U)

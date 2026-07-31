@@ -5,8 +5,9 @@
 
 /*
  * Cascaded controller:
- * position PI -> target velocity -> velocity PD -> servo pulse.
- * All internal position and velocity values use mm and mm/s.
+ * position PI -> target velocity -> velocity P with acceleration
+ * damping -> servo pulse. All internal position and velocity values
+ * use mm and mm/s.
  */
 #define BALL_BALANCE_TARGET_MM (0.0f)
 #define BALL_BALANCE_SERVO_DIRECTION (1.0f)
@@ -50,9 +51,14 @@ extern volatile float ball_balance_velocity_kp;
 extern volatile float ball_balance_velocity_kd;
 extern volatile float ball_balance_velocity_limit_mm_s;
 extern volatile float ball_balance_target_velocity_mm_s;
+extern volatile float ball_balance_estimated_position_mm;
 extern volatile float ball_balance_measured_velocity_mm_s;
+extern volatile float ball_balance_estimated_acceleration_mm_s2;
 extern volatile float ball_balance_vehicle_acceleration_mps2;
 extern volatile float ball_balance_acceleration_feedforward_us;
+extern volatile float ball_balance_proportional_us;
+extern volatile float ball_balance_derivative_us;
+extern volatile uint32_t ball_balance_update_count;
 extern volatile uint16_t ball_balance_servo_pulse_us;
 extern volatile ball_balance_status_t ball_balance_status;
 

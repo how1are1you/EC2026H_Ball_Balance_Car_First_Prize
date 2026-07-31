@@ -1,8 +1,8 @@
 #include "ball_static_task.h"
 
 #include "ball_balance.h"
+#include "ball_state_observer.h"
 #include "servo.h"
-#include "uart_callback.h"
 
 #include <stdio.h>
 
@@ -61,11 +61,9 @@ static float absolute_float(float value)
     return (value < 0.0f) ? -value : value;
 }
 
-static uint8_t vision_is_fresh(uint32_t now_ms)
+static uint8_t state_is_fresh(void)
 {
-    return (vision_ball_position_valid != 0U) &&
-           ((uint32_t)(now_ms - vision_ball_last_update_ms) <=
-            BALL_STATIC_VISION_TIMEOUT_MS);
+    return ball_state_observer.valid;
 }
 
 static uint8_t target_is_stable(
@@ -201,12 +199,14 @@ uint8_t ball_static_task_start(void)
     if (ball_static_ready == 0U)
     {
         ball_static_fault =
-            vision_is_fresh(now_ms) ? BALL_STATIC_FAULT_START_POSITION : BALL_STATIC_FAULT_VISION;
+            state_is_fresh() ?
+                BALL_STATIC_FAULT_START_POSITION :
+                BALL_STATIC_FAULT_VISION;
         return 0U;
     }
 
     task_start_ms = now_ms;
-    positive_peak_mm = vision_ball_position_mm;
+    positive_peak_mm = ball_state_observer.position_mm;
     settle_start_ms = 0U;
     ball_static_elapsed_ms = 0U;
     ball_static_positive_max_error_mm = 0.0f;
@@ -263,8 +263,8 @@ void ball_static_task_service(void)
         "BOL,%lu,%u,%d,%d,%u,%u,%d,%d\r\n",
         (unsigned long)ball_static_elapsed_ms,
         (unsigned int)ball_static_state,
-        (int)(vision_ball_position_mm * 10.0f),
-        (int)(vision_ball_velocity_mm_s * 10.0f),
+        (int)(ball_state_observer.position_mm * 10.0f),
+        (int)(ball_state_observer.velocity_mm_s * 10.0f),
         (unsigned int)servo_get_pulse_us(),
         (unsigned int)ball_static_fault,
         (int)(ball_static_positive_max_error_mm * 10.0f),
@@ -274,15 +274,15 @@ void ball_static_task_service(void)
 void ball_static_task_update(void)
 {
     uint32_t now_ms = (uint32_t)tick_ms;
-    float position_mm = vision_ball_position_mm;
-    float velocity_mm_s = vision_ball_velocity_mm_s;
+    float position_mm = ball_state_observer.position_mm;
+    float velocity_mm_s = ball_state_observer.velocity_mm_s;
     float endpoint_error_mm;
 
     if (ball_static_state == BALL_STATIC_READY)
     {
         ball_static_target_mm = 0.0f;
         apply_pulse(SERVO_NEUTRAL_PULSE_US);
-        if (vision_is_fresh(now_ms) != 0U &&
+        if (state_is_fresh() != 0U &&
             absolute_float(position_mm) <=
                 BALL_STATIC_START_TOLERANCE_MM)
         {
@@ -313,7 +313,7 @@ void ball_static_task_update(void)
 
     ball_static_elapsed_ms = now_ms - task_start_ms;
     if (ball_static_state != BALL_STATIC_DONE &&
-        vision_is_fresh(now_ms) == 0U)
+        state_is_fresh() == 0U)
     {
         set_fault(BALL_STATIC_FAULT_VISION, now_ms);
         return;
