@@ -256,6 +256,18 @@ static void imu_debug_oled_show(void)
 
     oled_show_text(0, 20, "GZ:");
     imu_show_signed_tenths(24, 20, sample.gyro_z_dps);
+
+    oled_show_text(0, 30, "AX:");
+    imu_show_signed_tenths(24, 30, sample.accel_g[0]);
+    oled_show_text(66, 30, "g");
+
+    oled_show_text(0, 40, "AY:");
+    imu_show_signed_tenths(24, 40, sample.accel_g[1]);
+    oled_show_text(66, 40, "g");
+
+    oled_show_text(0, 50, "AZ:");
+    imu_show_signed_tenths(24, 50, sample.accel_g[2]);
+    oled_show_text(66, 50, "g");
     OLED_Refresh_Gram();
 }
 
