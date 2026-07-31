@@ -29,8 +29,12 @@ All rights reserved
 #define RUN_MODE_BALL_LAP     5
 #define RUN_MODE_BALL_STATIC  6
 #define RUN_MODE_SERVO_ADJUST 7
-#define RUN_MODE_COUNT        8
+#define RUN_MODE_BALL_HOLD_LAP 8
+#define RUN_MODE_COUNT        9
 #define RUN_MODE_MENU_DEFAULT RUN_MODE_STRAIGHT_TURN
+
+#define MENU_MODE_COUNT (6U)
+#define MENU_ITEMS_PER_PAGE (4U)
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
 #define Frequency	200.0f			//每5ms读取一次编码器的值
@@ -61,6 +65,13 @@ typedef struct
   int A;      
   int B;  
 }Encoder;
+
+typedef struct
+{
+    uint8_t mode;
+    const char *label;
+} menu_item_t;
+
 extern float Move_X,Move_Z;						//目标速度和目标转向速度
 extern Encoder OriginalEncoder; 					//编码器原始数据   
 extern Motor_parameter MotorA,MotorB;				//左右电机相关变量
@@ -69,6 +80,8 @@ extern float Velocity_KP,Velocity_KI;
 extern int Run_Mode;//小车运行模式
 extern volatile uint8_t Menu_Active;
 extern volatile uint8_t Menu_Selection;
+extern volatile uint8_t Menu_SelectionIndex;
+extern const menu_item_t Menu_Items[MENU_MODE_COUNT];
 void TIM6_Init(void); 
 void Get_Velocity_From_Encoder(int Encoder1,int Encoder2);
 float target_limit_float(float insert,float low,float high);

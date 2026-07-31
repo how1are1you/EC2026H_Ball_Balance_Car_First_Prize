@@ -31,6 +31,7 @@
  */
 #include "board.h"
 #include "ball_balance.h"
+#include "ball_hold_lap.h"
 #include "ball_static_task.h"
 #include "imu/imu.h"
 #include "servo.h"
@@ -79,6 +80,7 @@ int main(void)
     control_uart_reset();
     servo_init();
     ball_balance_init();
+    ball_hold_lap_init();
     ball_static_task_init();
     // 清除所有外设的中断挂起状态
     NVIC_ClearPendingIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN); // 编码器A与MPU6050中断

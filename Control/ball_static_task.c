@@ -6,21 +6,21 @@
 
 #include <stdio.h>
 
-#define BALL_STATIC_POS_TARGET_MM          (50.0f)
-#define BALL_STATIC_NEG_TARGET_MM          (-50.0f)
-#define BALL_STATIC_START_TOLERANCE_MM     (5.0f)
-#define BALL_STATIC_NEG_REACHED_MM         (-45.0f)
-#define BALL_STATIC_PID_ENTRY_MM           (-30.0f)
+#define BALL_STATIC_POS_TARGET_MM (50.0f)
+#define BALL_STATIC_NEG_TARGET_MM (-50.0f)
+#define BALL_STATIC_START_TOLERANCE_MM (5.0f)
+#define BALL_STATIC_NEG_REACHED_MM (-45.0f)
+#define BALL_STATIC_PID_ENTRY_MM (-30.0f)
 #define BALL_STATIC_REVERSAL_VELOCITY_MM_S (5.0f)
-#define BALL_STATIC_READY_TIME_MS          (200UL)
-#define BALL_STATIC_VISION_TIMEOUT_MS      (200UL)
-#define BALL_STATIC_DEFAULT_UP_PULSE_US    (1550U)
-#define BALL_STATIC_DEFAULT_DOWN_PULSE_US  (1050U)
-#define BALL_STATIC_DEFAULT_HOLD_DELTA_US  (30U)
-#define BALL_STATIC_DEFAULT_POS_SWITCH_MM  (8.5f)
-#define BALL_STATIC_DEFAULT_NEG_SWITCH_MM  (4.0f)
-#define BALL_STATIC_DEFAULT_DEADBAND_MM     (2.5f)
-#define BALL_STATIC_DEFAULT_VELOCITY_MM_S  (10.0f)
+#define BALL_STATIC_READY_TIME_MS (200UL)
+#define BALL_STATIC_VISION_TIMEOUT_MS (200UL)
+#define BALL_STATIC_DEFAULT_UP_PULSE_US (1550U)
+#define BALL_STATIC_DEFAULT_DOWN_PULSE_US (1050U)
+#define BALL_STATIC_DEFAULT_HOLD_DELTA_US (30U)
+#define BALL_STATIC_DEFAULT_POS_SWITCH_MM (9.2f)
+#define BALL_STATIC_DEFAULT_NEG_SWITCH_MM (4.0f)
+#define BALL_STATIC_DEFAULT_DEADBAND_MM (2.5f)
+#define BALL_STATIC_DEFAULT_VELOCITY_MM_S (10.0f)
 
 extern volatile unsigned long tick_ms;
 
@@ -61,10 +61,9 @@ static float absolute_float(float value)
 
 static uint8_t vision_is_fresh(uint32_t now_ms)
 {
-    return
-        (vision_ball_position_valid != 0U) &&
-        ((uint32_t)(now_ms - vision_ball_last_update_ms) <=
-         BALL_STATIC_VISION_TIMEOUT_MS);
+    return (vision_ball_position_valid != 0U) &&
+           ((uint32_t)(now_ms - vision_ball_last_update_ms) <=
+            BALL_STATIC_VISION_TIMEOUT_MS);
 }
 
 static void apply_pulse(uint16_t pulse_us)
@@ -186,9 +185,7 @@ uint8_t ball_static_task_start(void)
     if (ball_static_ready == 0U)
     {
         ball_static_fault =
-            vision_is_fresh(now_ms) ?
-                BALL_STATIC_FAULT_START_POSITION :
-                BALL_STATIC_FAULT_VISION;
+            vision_is_fresh(now_ms) ? BALL_STATIC_FAULT_START_POSITION : BALL_STATIC_FAULT_VISION;
         return 0U;
     }
 
@@ -212,22 +209,22 @@ void ball_static_task_stop(void)
 
 uint8_t ball_static_task_controller_enabled(void)
 {
-    return
-        (ball_static_state == BALL_STATIC_PID_HOLD ||
-         ball_static_state == BALL_STATIC_DONE) ?
-            1U : 0U;
+    return (ball_static_state == BALL_STATIC_PID_HOLD ||
+            ball_static_state == BALL_STATIC_DONE)
+               ? 1U
+               : 0U;
 }
 
 uint8_t ball_static_task_is_running(void)
 {
-    return
-        (ball_static_state == BALL_STATIC_MOVE_POS ||
-         ball_static_state == BALL_STATIC_HOLD_POS ||
-         ball_static_state == BALL_STATIC_MOVE_NEG ||
-         ball_static_state == BALL_STATIC_HOLD_NEG ||
-         ball_static_state == BALL_STATIC_PID_HOLD ||
-         ball_static_state == BALL_STATIC_DONE) ?
-            1U : 0U;
+    return (ball_static_state == BALL_STATIC_MOVE_POS ||
+            ball_static_state == BALL_STATIC_HOLD_POS ||
+            ball_static_state == BALL_STATIC_MOVE_NEG ||
+            ball_static_state == BALL_STATIC_HOLD_NEG ||
+            ball_static_state == BALL_STATIC_PID_HOLD ||
+            ball_static_state == BALL_STATIC_DONE)
+               ? 1U
+               : 0U;
 }
 
 void ball_static_task_service(void)
@@ -304,81 +301,81 @@ void ball_static_task_update(void)
 
     switch (ball_static_state)
     {
-        case BALL_STATIC_MOVE_POS:
-            ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
-            apply_pulse(ball_static_up_pulse_us);
-            if (position_mm >= ball_static_positive_switch_mm)
-            {
-                positive_peak_mm = position_mm;
-                ball_static_state = BALL_STATIC_HOLD_POS;
-                apply_pulse(ball_static_down_pulse_us);
-            }
-            break;
-
-        case BALL_STATIC_HOLD_POS:
-            ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
+    case BALL_STATIC_MOVE_POS:
+        ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
+        apply_pulse(ball_static_up_pulse_us);
+        if (position_mm >= ball_static_positive_switch_mm)
+        {
+            positive_peak_mm = position_mm;
+            ball_static_state = BALL_STATIC_HOLD_POS;
             apply_pulse(ball_static_down_pulse_us);
-            if (position_mm > positive_peak_mm)
-            {
-                positive_peak_mm = position_mm;
-            }
-            if (velocity_mm_s <=
-                -BALL_STATIC_REVERSAL_VELOCITY_MM_S)
-            {
-                endpoint_error_mm = absolute_float(
-                    positive_peak_mm -
-                    BALL_STATIC_POS_TARGET_MM);
-                ball_static_positive_max_error_mm =
-                    endpoint_error_mm;
-                ball_static_target_mm =
-                    BALL_STATIC_NEG_TARGET_MM;
-                ball_static_state = BALL_STATIC_MOVE_NEG;
-            }
-            break;
+        }
+        break;
 
-        case BALL_STATIC_MOVE_NEG:
-            ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
-            apply_pulse(ball_static_down_pulse_us);
-            if (position_mm <= ball_static_negative_switch_mm)
-            {
-                ball_static_state = BALL_STATIC_HOLD_NEG;
-                apply_pulse(ball_static_up_pulse_us);
-            }
-            break;
+    case BALL_STATIC_HOLD_POS:
+        ball_static_target_mm = BALL_STATIC_POS_TARGET_MM;
+        apply_pulse(ball_static_down_pulse_us);
+        if (position_mm > positive_peak_mm)
+        {
+            positive_peak_mm = position_mm;
+        }
+        if (velocity_mm_s <=
+            -BALL_STATIC_REVERSAL_VELOCITY_MM_S)
+        {
+            endpoint_error_mm = absolute_float(
+                positive_peak_mm -
+                BALL_STATIC_POS_TARGET_MM);
+            ball_static_positive_max_error_mm =
+                endpoint_error_mm;
+            ball_static_target_mm =
+                BALL_STATIC_NEG_TARGET_MM;
+            ball_static_state = BALL_STATIC_MOVE_NEG;
+        }
+        break;
 
-        case BALL_STATIC_HOLD_NEG:
-            ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+    case BALL_STATIC_MOVE_NEG:
+        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+        apply_pulse(ball_static_down_pulse_us);
+        if (position_mm <= ball_static_negative_switch_mm)
+        {
+            ball_static_state = BALL_STATIC_HOLD_NEG;
             apply_pulse(ball_static_up_pulse_us);
-            if (position_mm <= BALL_STATIC_PID_ENTRY_MM)
-            {
-                ball_static_state = BALL_STATIC_PID_HOLD;
-                ball_balance_set_reference(
-                    BALL_STATIC_NEG_TARGET_MM, 0.0f);
-            }
-            break;
+        }
+        break;
 
-        case BALL_STATIC_PID_HOLD:
-        case BALL_STATIC_DONE:
-            ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+    case BALL_STATIC_HOLD_NEG:
+        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+        apply_pulse(ball_static_up_pulse_us);
+        if (position_mm <= BALL_STATIC_PID_ENTRY_MM)
+        {
+            ball_static_state = BALL_STATIC_PID_HOLD;
             ball_balance_set_reference(
                 BALL_STATIC_NEG_TARGET_MM, 0.0f);
-            if (vision_is_fresh(now_ms) != 0U &&
-                position_mm <= BALL_STATIC_NEG_REACHED_MM)
-            {
-                endpoint_error_mm = absolute_float(
-                    BALL_STATIC_NEG_TARGET_MM - position_mm);
-                if (endpoint_error_mm >
-                    ball_static_negative_max_error_mm)
-                {
-                    ball_static_negative_max_error_mm =
-                        endpoint_error_mm;
-                }
-            }
-            break;
+        }
+        break;
 
-        default:
-            set_fault(
-                BALL_STATIC_FAULT_TOTAL_TIMEOUT, now_ms);
-            break;
+    case BALL_STATIC_PID_HOLD:
+    case BALL_STATIC_DONE:
+        ball_static_target_mm = BALL_STATIC_NEG_TARGET_MM;
+        ball_balance_set_reference(
+            BALL_STATIC_NEG_TARGET_MM, 0.0f);
+        if (vision_is_fresh(now_ms) != 0U &&
+            position_mm <= BALL_STATIC_NEG_REACHED_MM)
+        {
+            endpoint_error_mm = absolute_float(
+                BALL_STATIC_NEG_TARGET_MM - position_mm);
+            if (endpoint_error_mm >
+                ball_static_negative_max_error_mm)
+            {
+                ball_static_negative_max_error_mm =
+                    endpoint_error_mm;
+            }
+        }
+        break;
+
+    default:
+        set_fault(
+            BALL_STATIC_FAULT_TOTAL_TIMEOUT, now_ms);
+        break;
     }
 }

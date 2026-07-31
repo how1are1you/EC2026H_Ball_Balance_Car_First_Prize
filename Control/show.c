@@ -20,6 +20,7 @@ All rights reserved
 #include "show.h"
 #include "IR_Module.h"
 #include "ball_balance.h"
+#include "ball_hold_lap.h"
 #include "ball_static_task.h"
 #include "imu/imu.h"
 #include "servo.h"
@@ -412,6 +413,10 @@ static const char *straight_turn_state_text(
             return "LINE2";
         case STRAIGHT_TURN_ARC_2:
             return "ARC2";
+        case STRAIGHT_TURN_POST_LAP:
+            return "POST1M";
+        case STRAIGHT_TURN_BRAKING:
+            return "BRAKE";
         case STRAIGHT_TURN_DONE:
             return "DONE";
         case STRAIGHT_TURN_FAULT:
@@ -501,6 +506,190 @@ static void straight_turn_oled_show(void)
     {
         oled_show_text(0, 50, Flag_Stop ? "1:START" : "1:STOP");
     }
+    OLED_Refresh_Gram();
+}
+
+static void ball_hold_show_time(
+    uint8_t y,
+    uint32_t elapsed_ms)
+{
+    uint32_t seconds = elapsed_ms / 1000U;
+    uint32_t milliseconds = elapsed_ms % 1000U;
+
+    if (seconds > 99U)
+    {
+        seconds = 99U;
+        milliseconds = 999U;
+    }
+
+    oled_show_text(0, y, "TIME:");
+    OLED_ShowNumber(34, y, seconds, 2, 12);
+    OLED_ShowChar(46, y, '.', 12, 1);
+    OLED_ShowNumber(52, y, milliseconds, 3, 12);
+    oled_show_text(72, y, "s");
+}
+
+static const char *ball_hold_state_text(void)
+{
+    switch (ball_hold_lap_state)
+    {
+        case BALL_HOLD_LAP_READY:
+            return "READY";
+        case BALL_HOLD_LAP_CAPTURING:
+            return "CAPTURE";
+        case BALL_HOLD_LAP_RUNNING:
+            return "RUN";
+        case BALL_HOLD_LAP_POST_LAP:
+            return "POST1M";
+        case BALL_HOLD_LAP_BRAKING:
+            return "BRAKE";
+        case BALL_HOLD_LAP_DONE:
+            return "DONE";
+        case BALL_HOLD_LAP_ABORTED:
+            return "ABORT";
+        case BALL_HOLD_LAP_FAULT:
+            return "FAULT";
+        default:
+            return "?";
+    }
+}
+
+static void ball_hold_show_position(
+    uint8_t y,
+    const char *label,
+    float position_mm)
+{
+    uint8_t end_x;
+
+    oled_show_text(0, y, label);
+    end_x = vision_show_position_mm(30, y, position_mm);
+    oled_show_text((uint8_t)(end_x + 3U), y, "mm");
+}
+
+static void ball_hold_lap_oled_show(void)
+{
+    uint32_t post_distance_mm;
+
+    memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
+    oled_show_text(0, 0, "BALL HOLD");
+    oled_show_text(66, 0, ball_hold_state_text());
+
+    if (ball_hold_lap_state == BALL_HOLD_LAP_CAPTURING)
+    {
+        oled_show_text(0, 10, "MS:");
+        OLED_ShowNumber(
+            24, 10,
+            ball_hold_lap_capture_elapsed_ms % 1000U,
+            3, 12);
+        oled_show_text(54, 10, "N:");
+        OLED_ShowNumber(
+            66, 10,
+            ball_hold_lap_capture_frames % 100U,
+            2, 12);
+        ball_hold_show_position(
+            20, "AVG:", ball_hold_lap_capture_mean_mm);
+        ball_hold_show_position(
+            30, "RNG:", ball_hold_lap_capture_span_mm);
+        if (ball_hold_lap_current_valid != 0U)
+        {
+            ball_hold_show_position(
+                40, "NOW:", ball_hold_lap_current_mm);
+        }
+        else
+        {
+            oled_show_text(0, 40, "NOW:NO VISION");
+        }
+        oled_show_text(0, 50, "1:CANCEL");
+        OLED_Refresh_Gram();
+        return;
+    }
+
+    if (ball_hold_lap_state == BALL_HOLD_LAP_READY)
+    {
+        if (vision_ball_position_valid != 0U &&
+            (uint32_t)(tick_ms -
+                       vision_ball_last_update_ms) <=
+                BALL_HOLD_LAP_VISION_TIMEOUT_MS)
+        {
+            ball_hold_show_position(
+                20, "POS:", vision_ball_position_mm);
+        }
+        else
+        {
+            oled_show_text(0, 20, "POS:NO VISION");
+        }
+        oled_show_text(0, 40, "STABLE 300ms");
+        oled_show_text(0, 50, "1:START");
+        OLED_Refresh_Gram();
+        return;
+    }
+
+    if ((ball_hold_lap_state == BALL_HOLD_LAP_ABORTED ||
+         ball_hold_lap_state == BALL_HOLD_LAP_FAULT) &&
+        ball_hold_lap_time_ms == 0U)
+    {
+        oled_show_text(0, 10, "TIME:--");
+    }
+    else
+    {
+        ball_hold_show_time(
+            10,
+            (ball_hold_lap_time_ms != 0U) ?
+                ball_hold_lap_time_ms :
+                StraightTurnElapsedMs);
+    }
+    ball_hold_show_position(
+        20, "REF:", ball_hold_lap_target_mm);
+
+    if (ball_hold_lap_state == BALL_HOLD_LAP_POST_LAP)
+    {
+        post_distance_mm =
+            (uint32_t)(
+                StraightTurnPostLapDistanceM *
+                1000.0f + 0.5f);
+        oled_show_text(0, 30, "POST:");
+        OLED_ShowNumber(36, 30, post_distance_mm, 4, 12);
+        oled_show_text(66, 30, "mm");
+    }
+    else if (ball_hold_lap_current_valid != 0U)
+    {
+        ball_hold_show_position(
+            30, "NOW:", ball_hold_lap_current_mm);
+    }
+    else
+    {
+        oled_show_text(0, 30, "NOW:NO VISION");
+    }
+
+    ball_hold_show_position(
+        40, "MAX:", ball_hold_lap_max_abs_error_mm);
+
+    if (ball_hold_lap_state == BALL_HOLD_LAP_DONE)
+    {
+        oled_show_text(
+            0, 50,
+            (ball_hold_lap_time_pass != 0U) ?
+                "T:PASS " : "T:OVERTIME ");
+        oled_show_text(
+            54, 50,
+            (ball_hold_lap_position_pass != 0U) ?
+                "E:PASS" : "E:FAIL");
+    }
+    else if (ball_hold_lap_state == BALL_HOLD_LAP_FAULT)
+    {
+        oled_show_text(0, 50, "FAULT:");
+        OLED_ShowNumber(
+            42, 50, ball_hold_lap_fault, 1, 12);
+    }
+    else if (ball_hold_lap_state == BALL_HOLD_LAP_ABORTED)
+    {
+        oled_show_text(0, 50, "ABORT 1:RETRY");
+    }
+    else
+    {
+        oled_show_text(0, 50, "1:STOP");
+    }
+
     OLED_Refresh_Gram();
 }
 
@@ -680,13 +869,41 @@ static void oled_show_voltage(uint8_t y)
 
 static void menu_oled_show(void)
 {
+    uint8_t page =
+        (uint8_t)(Menu_SelectionIndex /
+                  MENU_ITEMS_PER_PAGE);
+    uint8_t first =
+        (uint8_t)(page * MENU_ITEMS_PER_PAGE);
+    uint8_t end =
+        (uint8_t)(first + MENU_ITEMS_PER_PAGE);
+    uint8_t page_count =
+        (uint8_t)((MENU_MODE_COUNT +
+                   MENU_ITEMS_PER_PAGE - 1U) /
+                  MENU_ITEMS_PER_PAGE);
+    uint8_t index;
+    uint8_t y = 0U;
+
+    if (end > MENU_MODE_COUNT)
+    {
+        end = MENU_MODE_COUNT;
+    }
+
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
 
-    menu_show_item(0, RUN_MODE_STRAIGHT_TURN, "ONE LAP");
-    menu_show_item(12, RUN_MODE_BALL_LAP, "BALL LAP");
-    menu_show_item(24, RUN_MODE_BALL_STATIC, "STATIC HYB");
-    menu_show_item(36, RUN_MODE_SERVO_ADJUST, "SERVO ADJ");
-    menu_show_item(48, RUN_MODE_IMU_DEBUG, "IMU DEBUG");
+    for (index = first; index < end; index++)
+    {
+        menu_show_item(
+            y,
+            Menu_Items[index].mode,
+            Menu_Items[index].label);
+        y = (uint8_t)(y + 12U);
+    }
+
+    OLED_ShowChar(0, 52, 'P', 12, 1);
+    OLED_ShowNumber(6, 52, page + 1U, 1, 12);
+    OLED_ShowChar(12, 52, '/', 12, 1);
+    OLED_ShowNumber(18, 52, page_count, 1, 12);
+    oled_show_text(30, 52, "1>N 2>OK");
 
     OLED_Refresh_Gram();
 }
@@ -724,6 +941,11 @@ void oled_show(void)
     if (Run_Mode == RUN_MODE_SERVO_ADJUST)
     {
         servo_adjust_oled_show();
+        return;
+    }
+    if (Run_Mode == RUN_MODE_BALL_HOLD_LAP)
+    {
+        ball_hold_lap_oled_show();
         return;
     }
     if (Run_Mode == RUN_MODE_TURN_CAL)
@@ -816,6 +1038,7 @@ void APP_Show(void)
         Run_Mode == RUN_MODE_TURN_CAL ||
         Run_Mode == RUN_MODE_STRAIGHT_TURN ||
         Run_Mode == RUN_MODE_BALL_LAP ||
+        Run_Mode == RUN_MODE_BALL_HOLD_LAP ||
         Run_Mode == RUN_MODE_BALL_STATIC ||
         Run_Mode == RUN_MODE_SERVO_ADJUST)
     {

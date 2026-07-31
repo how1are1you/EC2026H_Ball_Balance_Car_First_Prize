@@ -23,6 +23,10 @@
 #define STRAIGHT_TURN_ARC_BLEND_DEG (4.0f)
 #define STRAIGHT_TURN_ARC_STOP_MARGIN_DEG (0.5f)
 #define STRAIGHT_TURN_SECOND_STRAIGHT_HEADING_DEG (-177.0f)
+#define STRAIGHT_TURN_POST_LAP_MAX_DISTANCE_M (2.0f)
+#define STRAIGHT_TURN_POST_DECELERATION_MPS2 (0.20f)
+#define STRAIGHT_TURN_STOP_SPEED_MPS (0.01f)
+#define STRAIGHT_TURN_POST_TIMEOUT_TICKS (3000UL)
 
 volatile StraightTurnState_t StraightTurnState =
     STRAIGHT_TURN_IDLE;
@@ -34,21 +38,26 @@ volatile float StraightTurnHeadingErrorDeg;
 volatile float StraightTurnCommandSpeed;
 volatile float StraightTurnStartupAccelerationMps2;
 volatile uint32_t StraightTurnElapsedMs;
+volatile uint32_t StraightTurnLapTimeMs;
+volatile float StraightTurnPostLapDistanceM;
 
 static float straight_turn_initial_yaw;
 static float straight_turn_straight_heading_yaw;
 static float straight_turn_arc_start_yaw;
+static float straight_turn_post_lap_heading_yaw;
 static float straight_turn_last_valid_yaw;
 static float straight_turn_filtered_line_error;
 static float straight_turn_gyro_z_dps;
 static uint32_t straight_turn_last_imu_sample;
 static uint16_t straight_turn_imu_stale_ticks;
 static uint16_t straight_turn_line_lost_ticks;
-static uint16_t straight_turn_elapsed_ticks;
+static uint32_t straight_turn_elapsed_ticks;
+static uint32_t straight_turn_post_elapsed_ticks;
 static float straight_turn_target_speed_mps =
     STRAIGHT_TURN_FAST_SPEED_MPS;
 static float straight_turn_acceleration_mps2 =
     STRAIGHT_TURN_FAST_ACCELERATION_MPS2;
+static float straight_turn_post_lap_target_m;
 
 static float straight_turn_limit(
     float value,
@@ -224,12 +233,24 @@ static void straight_turn_start_arc(uint8_t first_arc)
     else
     {
         StraightTurnState = STRAIGHT_TURN_ARC_2;
-        TurnCalibration_StartMovingFromYaw(
-            STRAIGHT_TURN_ARC_TARGET_DEG,
-            StraightTurnCommandSpeed,
-            straight_turn_target_speed_mps,
-            straight_turn_arc_start_yaw,
-            straight_turn_last_imu_sample);
+        if (straight_turn_post_lap_target_m > 0.0f)
+        {
+            TurnCalibration_StartMovingFromYawContinuous(
+                STRAIGHT_TURN_ARC_TARGET_DEG,
+                StraightTurnCommandSpeed,
+                straight_turn_target_speed_mps,
+                straight_turn_arc_start_yaw,
+                straight_turn_last_imu_sample);
+        }
+        else
+        {
+            TurnCalibration_StartMovingFromYaw(
+                STRAIGHT_TURN_ARC_TARGET_DEG,
+                StraightTurnCommandSpeed,
+                straight_turn_target_speed_mps,
+                straight_turn_arc_start_yaw,
+                straight_turn_last_imu_sample);
+        }
     }
 }
 
@@ -337,13 +358,89 @@ static void straight_turn_run_arc(void)
         }
         else
         {
-            StraightTurnState = STRAIGHT_TURN_DONE;
+            StraightTurnLapTimeMs = StraightTurnElapsedMs;
+            if (straight_turn_post_lap_target_m > 0.0f)
+            {
+                StraightTurnPostLapDistanceM = 0.0f;
+                straight_turn_post_elapsed_ticks = 0U;
+                straight_turn_post_lap_heading_yaw =
+                    straight_turn_last_valid_yaw;
+                straight_turn_filtered_line_error = 0.0f;
+                straight_turn_line_lost_ticks = 0U;
+                StraightTurnState = STRAIGHT_TURN_POST_LAP;
+            }
+            else
+            {
+                StraightTurnState = STRAIGHT_TURN_DONE;
+            }
         }
     }
     else if (TurnCalibrationState == TURN_CALIBRATION_FAULT)
     {
         straight_turn_fault(STRAIGHT_TURN_FAULT_ARC);
     }
+}
+
+static void straight_turn_run_post_lap(void)
+{
+    float distance_step;
+    float command_omega;
+    float speed_step;
+
+    if (straight_turn_update_imu() == 0U ||
+        straight_turn_update_line() == 0U)
+    {
+        return;
+    }
+
+    if (StraightTurnState == STRAIGHT_TURN_POST_LAP)
+    {
+        distance_step =
+            0.5f *
+            (MotorA.Current_Encoder +
+             MotorB.Current_Encoder) *
+            STRAIGHT_TURN_CONTROL_PERIOD_S;
+        StraightTurnPostLapDistanceM +=
+            straight_turn_limit(
+                distance_step,
+                0.0f,
+                STRAIGHT_TURN_MAX_DISTANCE_STEP_M);
+        if (StraightTurnPostLapDistanceM >=
+            straight_turn_post_lap_target_m)
+        {
+            StraightTurnState = STRAIGHT_TURN_BRAKING;
+        }
+    }
+
+    if (StraightTurnState == STRAIGHT_TURN_BRAKING)
+    {
+        speed_step =
+            STRAIGHT_TURN_POST_DECELERATION_MPS2 *
+            STRAIGHT_TURN_CONTROL_PERIOD_S;
+        if (StraightTurnCommandSpeed >
+            STRAIGHT_TURN_STOP_SPEED_MPS + speed_step)
+        {
+            StraightTurnCommandSpeed -= speed_step;
+        }
+        else
+        {
+            StraightTurnCommandSpeed = 0.0f;
+            StraightTurnStartupAccelerationMps2 = 0.0f;
+            MotorA.Target_Encoder = 0.0f;
+            MotorB.Target_Encoder = 0.0f;
+            StraightTurnState = STRAIGHT_TURN_DONE;
+            Flag_Stop = 1U;
+            return;
+        }
+    }
+
+    command_omega =
+        straight_turn_heading_omega(
+            straight_turn_post_lap_heading_yaw,
+            straight_turn_filtered_line_error);
+    Get_Target_Encoder(
+        StraightTurnCommandSpeed,
+        command_omega);
 }
 
 void StraightTurnTest_Reset(void)
@@ -357,9 +454,12 @@ void StraightTurnTest_Reset(void)
     StraightTurnCommandSpeed = 0.0f;
     StraightTurnStartupAccelerationMps2 = 0.0f;
     StraightTurnElapsedMs = 0U;
+    StraightTurnLapTimeMs = 0U;
+    StraightTurnPostLapDistanceM = 0.0f;
     straight_turn_initial_yaw = 0.0f;
     straight_turn_straight_heading_yaw = 0.0f;
     straight_turn_arc_start_yaw = 0.0f;
+    straight_turn_post_lap_heading_yaw = 0.0f;
     straight_turn_last_valid_yaw = 0.0f;
     straight_turn_filtered_line_error = 0.0f;
     straight_turn_gyro_z_dps = 0.0f;
@@ -367,6 +467,8 @@ void StraightTurnTest_Reset(void)
     straight_turn_imu_stale_ticks = 0U;
     straight_turn_line_lost_ticks = 0U;
     straight_turn_elapsed_ticks = 0U;
+    straight_turn_post_elapsed_ticks = 0U;
+    straight_turn_post_lap_target_m = 0.0f;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
     TurnCalibration_Reset();
@@ -376,6 +478,17 @@ void StraightTurnTest_Start(
     float target_speed_mps,
     float acceleration_mps2)
 {
+    StraightTurnTest_StartWithPostLap(
+        target_speed_mps,
+        acceleration_mps2,
+        0.0f);
+}
+
+void StraightTurnTest_StartWithPostLap(
+    float target_speed_mps,
+    float acceleration_mps2,
+    float post_lap_distance_m)
+{
     imu_sample_t sample;
 
     StraightTurnTest_Reset();
@@ -383,6 +496,11 @@ void StraightTurnTest_Start(
         straight_turn_limit(target_speed_mps, 0.05f, 0.50f);
     straight_turn_acceleration_mps2 =
         straight_turn_limit(acceleration_mps2, 0.01f, 1.00f);
+    straight_turn_post_lap_target_m =
+        straight_turn_limit(
+            post_lap_distance_m,
+            0.0f,
+            STRAIGHT_TURN_POST_LAP_MAX_DISTANCE_M);
     imu_get_snapshot(&sample);
     if (sample.status != IMU_STATUS_READY || sample.valid == 0U)
     {
@@ -423,11 +541,24 @@ void StraightTurnTest_Run(void)
     straight_turn_elapsed_ticks++;
     StraightTurnElapsedMs =
         (uint32_t)straight_turn_elapsed_ticks * 5U;
-    if (straight_turn_elapsed_ticks >=
-        STRAIGHT_TURN_TIMEOUT_TICKS)
+    if (straight_turn_post_lap_target_m <= 0.0f &&
+        straight_turn_elapsed_ticks >=
+            STRAIGHT_TURN_TIMEOUT_TICKS)
     {
         straight_turn_fault(STRAIGHT_TURN_FAULT_TIMEOUT);
         return;
+    }
+    if (StraightTurnState == STRAIGHT_TURN_POST_LAP ||
+        StraightTurnState == STRAIGHT_TURN_BRAKING)
+    {
+        straight_turn_post_elapsed_ticks++;
+        if (straight_turn_post_elapsed_ticks >=
+            STRAIGHT_TURN_POST_TIMEOUT_TICKS)
+        {
+            straight_turn_fault(
+                STRAIGHT_TURN_FAULT_POST_TIMEOUT);
+            return;
+        }
     }
 
     if (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1 ||
@@ -435,8 +566,13 @@ void StraightTurnTest_Run(void)
     {
         straight_turn_run_straight();
     }
-    else
+    else if (StraightTurnState == STRAIGHT_TURN_ARC_1 ||
+             StraightTurnState == STRAIGHT_TURN_ARC_2)
     {
         straight_turn_run_arc();
+    }
+    else
+    {
+        straight_turn_run_post_lap();
     }
 }

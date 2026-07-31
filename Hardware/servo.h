@@ -4,11 +4,11 @@
 #include <stdint.h>
 
 #define SERVO_MIN_PULSE_US (500U)
-#define SERVO_NEUTRAL_PULSE_US (1260U)
+#define SERVO_NEUTRAL_PULSE_US (1250U)
 #define SERVO_MAX_PULSE_US (2500U)
 
-#define SERVO_CONTROL_MIN_PULSE_US (700U)
-#define SERVO_CONTROL_MAX_PULSE_US (2000U)
+#define SERVO_CONTROL_MIN_PULSE_US (500U)
+#define SERVO_CONTROL_MAX_PULSE_US (2200U)
 #define SERVO_EFFECTIVE_STEP_US (10U)
 
 extern volatile uint16_t servo_pulse_us;

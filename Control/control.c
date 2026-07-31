@@ -21,6 +21,7 @@ All rights reserved
 #include "IR_Module.h"
 #include "imu/imu.h"
 #include "ball_balance.h"
+#include "ball_hold_lap.h"
 #include "ball_static_task.h"
 #include "servo.h"
 #include "straight_turn_test.h"
@@ -36,7 +37,36 @@ int Run_Mode=RUN_MODE_MENU_DEFAULT;//小车运行模式
 u8 Flag_Stop=1;//小车启动标志位
 volatile uint8_t Menu_Active=1U;
 volatile uint8_t Menu_Selection=RUN_MODE_MENU_DEFAULT;
+volatile uint8_t Menu_SelectionIndex;
+const menu_item_t Menu_Items[MENU_MODE_COUNT] =
+{
+	{RUN_MODE_STRAIGHT_TURN, "ONE LAP"},
+	{RUN_MODE_BALL_LAP, "BALL LAP"},
+	{RUN_MODE_BALL_HOLD_LAP, "BALL HOLD"},
+	{RUN_MODE_BALL_STATIC, "STATIC HYB"},
+	{RUN_MODE_SERVO_ADJUST, "SERVO ADJ"},
+	{RUN_MODE_IMU_DEBUG, "IMU DEBUG"}
+};
 static u8 Reset_Left_PI, Reset_Right_PI;
+
+static void menu_select_mode(uint8_t mode)
+{
+	uint8_t index;
+
+	for (index = 0U; index < MENU_MODE_COUNT; index++)
+	{
+		if (Menu_Items[index].mode == mode)
+		{
+			Menu_SelectionIndex = index;
+			Menu_Selection = mode;
+			return;
+		}
+	}
+
+	Menu_SelectionIndex = 0U;
+	Menu_Selection = Menu_Items[0].mode;
+}
+
 void TIMER_0_INST_IRQHandler(void)
 {
     static int lastRunMode = -1;
@@ -58,7 +88,13 @@ void TIMER_0_INST_IRQHandler(void)
 				TurnCalibration_Reset();
 				StraightTurnTest_Reset();
 				ball_static_task_reset();
+				ball_hold_lap_reset();
 				lastRunMode = Run_Mode;
+			}
+			if (Menu_Active == 0U &&
+			    Run_Mode == RUN_MODE_BALL_HOLD_LAP)
+			{
+				ball_hold_lap_update();
 			}
 			if (Menu_Active == 0U &&
 			    Run_Mode == RUN_MODE_BALL_STATIC)
@@ -71,6 +107,12 @@ void TIMER_0_INST_IRQHandler(void)
 				ball_balance_set_enabled(
 					ball_static_task_controller_enabled());
 			}
+			else if (Menu_Active == 0U &&
+			         Run_Mode == RUN_MODE_BALL_HOLD_LAP)
+			{
+				ball_balance_set_enabled(
+					ball_hold_lap_controller_enabled());
+			}
 			else
 			{
 				ball_balance_set_enabled(
@@ -79,7 +121,8 @@ void TIMER_0_INST_IRQHandler(void)
 			}
 			ball_balance_set_vehicle_acceleration(
 				(Menu_Active == 0U &&
-				 Run_Mode == RUN_MODE_BALL_LAP &&
+				 (Run_Mode == RUN_MODE_BALL_LAP ||
+				  Run_Mode == RUN_MODE_BALL_HOLD_LAP) &&
 				 Flag_Stop == 0U) ?
 					StraightTurnStartupAccelerationMps2 : 0.0f);
 			if (Menu_Active != 0U)
@@ -95,7 +138,8 @@ void TIMER_0_INST_IRQHandler(void)
 				control_uart_set_mode(
 					CONTROL_UART_OPEN_LOOP_TUNING);
 			}
-			else if (Run_Mode == RUN_MODE_BALL_LAP)
+			else if (Run_Mode == RUN_MODE_BALL_LAP ||
+			         Run_Mode == RUN_MODE_BALL_HOLD_LAP)
 			{
 				control_uart_set_mode(CONTROL_UART_PID_TUNING);
 			}
@@ -127,7 +171,8 @@ void TIMER_0_INST_IRQHandler(void)
 			}else if(Run_Mode==RUN_MODE_TURN_CAL){
 				TurnCalibration_Run();
 			}else if(Run_Mode==RUN_MODE_STRAIGHT_TURN ||
-			         Run_Mode==RUN_MODE_BALL_LAP){
+			         Run_Mode==RUN_MODE_BALL_LAP ||
+			         Run_Mode==RUN_MODE_BALL_HOLD_LAP){
 				StraightTurnTest_Run();
 			}
 			if (Flag_Stop)
@@ -299,26 +344,11 @@ void Key(void)
 
         if (tmp == USEKEY_single_click)
         {
-            if (Menu_Selection == RUN_MODE_STRAIGHT_TURN)
-            {
-                Menu_Selection = RUN_MODE_BALL_LAP;
-            }
-            else if (Menu_Selection == RUN_MODE_BALL_LAP)
-            {
-                Menu_Selection = RUN_MODE_BALL_STATIC;
-            }
-            else if (Menu_Selection == RUN_MODE_BALL_STATIC)
-            {
-                Menu_Selection = RUN_MODE_SERVO_ADJUST;
-            }
-            else if (Menu_Selection == RUN_MODE_SERVO_ADJUST)
-            {
-                Menu_Selection = RUN_MODE_IMU_DEBUG;
-            }
-            else
-            {
-                Menu_Selection = RUN_MODE_STRAIGHT_TURN;
-            }
+            Menu_SelectionIndex =
+                (uint8_t)((Menu_SelectionIndex + 1U) %
+                          MENU_MODE_COUNT);
+            Menu_Selection =
+                Menu_Items[Menu_SelectionIndex].mode;
         }
         else if (tmp == USEKEY_double_click)
         {
@@ -337,18 +367,20 @@ void Key(void)
         TurnCalibration_Reset();
         StraightTurnTest_Reset();
         ball_static_task_stop();
+        ball_hold_lap_stop();
 
         if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
             Run_Mode == RUN_MODE_BALL_LAP ||
+            Run_Mode == RUN_MODE_BALL_HOLD_LAP ||
             Run_Mode == RUN_MODE_IMU_DEBUG ||
             Run_Mode == RUN_MODE_BALL_STATIC ||
             Run_Mode == RUN_MODE_SERVO_ADJUST)
         {
-            Menu_Selection = (u8)Run_Mode;
+            menu_select_mode((uint8_t)Run_Mode);
         }
         else
         {
-            Menu_Selection = RUN_MODE_MENU_DEFAULT;
+            menu_select_mode(RUN_MODE_MENU_DEFAULT);
         }
         Menu_Active = 1U;
         return;
@@ -419,6 +451,21 @@ void Key(void)
             else
             {
                 (void)ball_static_task_start();
+            }
+        }
+        else if (Run_Mode == RUN_MODE_BALL_HOLD_LAP)
+        {
+            Reset_Velocity_PI();
+            if (ball_hold_lap_state == BALL_HOLD_LAP_READY ||
+                ball_hold_lap_state == BALL_HOLD_LAP_DONE ||
+                ball_hold_lap_state == BALL_HOLD_LAP_ABORTED ||
+                ball_hold_lap_state == BALL_HOLD_LAP_FAULT)
+            {
+                ball_hold_lap_start();
+            }
+            else
+            {
+                ball_hold_lap_stop();
             }
         }
         else if (Run_Mode == RUN_MODE_SERVO_ADJUST)

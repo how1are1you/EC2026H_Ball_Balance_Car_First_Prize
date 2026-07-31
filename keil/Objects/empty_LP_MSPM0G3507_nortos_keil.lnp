@@ -43,6 +43,8 @@
 ".\objects\datascope_dp.o"
 ".\objects\uart_callback.o"
 ".\objects\ball_balance.o"
+".\objects\ball_position_capture.o"
+".\objects\ball_hold_lap.o"
 ".\objects\ball_static_task.o"
 ".\objects\turn_calibration.o"
 ".\objects\straight_turn_test.o"

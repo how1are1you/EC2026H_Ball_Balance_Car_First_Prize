@@ -20,7 +20,7 @@ typedef enum
  * Change this default after the on-track 180-degree arc test is satisfactory.
  * The OLED tuning value is kept while powered, but is not written to flash.
  */
-#define TURN_CALIBRATION_RADIUS_DEFAULT_M (0.475f)
+#define TURN_CALIBRATION_RADIUS_DEFAULT_M (0.471f)
 
 extern volatile TurnCalibrationState_t TurnCalibrationState;
 extern volatile uint8_t TurnCalibrationFault;

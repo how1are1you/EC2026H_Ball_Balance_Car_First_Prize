@@ -635,6 +635,16 @@
               <FilePath>..\Control\ball_balance.c</FilePath>
             </File>
             <File>
+              <FileName>ball_position_capture.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_position_capture.c</FilePath>
+            </File>
+            <File>
+              <FileName>ball_hold_lap.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_hold_lap.c</FilePath>
+            </File>
+            <File>
               <FileName>ball_static_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Control\ball_static_task.c</FilePath>

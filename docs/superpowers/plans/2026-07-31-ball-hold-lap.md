@@ -17,6 +17,7 @@
 - 视觉数据超过 200 ms 未更新时车辆不停，舵机回中；视觉恢复后自动闭环。
 - 完成第二个半圆视为通过 A 点并锁存一圈时间；附加 1.00 m 和制动时间不计入一圈成绩。
 - 一圈时间超过 30.000 s 只记录 `OVERTIME`，不提前中止。
+- `BALL HOLD LAP` 不使用原有一圈 40 s 硬超时；通过 A 点后使用独立 15 s 附加段看门狗。
 - 红外丢线和 IMU 失效继续沿用现有安全停车。
 - 不修改 `empty.syscfg`、生成配置文件、`source/` 或 TI DriverLib。
 - 不提交 `keil/Objects/`、uVision 用户设置或用户已经暂存的既有改动。
@@ -254,6 +255,7 @@ Expected: PASS。
 #define STRAIGHT_TURN_POST_LAP_MAX_DISTANCE_M (2.0f)
 #define STRAIGHT_TURN_POST_DECELERATION_MPS2  (0.20f)
 #define STRAIGHT_TURN_STOP_SPEED_MPS          (0.01f)
+#define STRAIGHT_TURN_POST_TIMEOUT_TICKS      (3000UL)
 
 static float straight_turn_post_lap_target_m;
 static float straight_turn_post_lap_heading_yaw;
@@ -283,6 +285,8 @@ StraightTurnCommandSpeed -=
 ```
 
 速度降到 `STRAIGHT_TURN_STOP_SPEED_MPS` 以下时，将左右目标速度清零、状态置为 `DONE`、`Flag_Stop = 1U`。制动阶段仍使用红外和航向控制，不能直线开环滑行。
+
+当扩展启动接口的附加距离大于零时，不应用原有一圈 40 s 硬超时；一圈可继续并在 A 点锁存 `OVERTIME`。从 A 点开始单独累计附加段时间，达到 3000 个控制周期（15 s）仍未完成停车时进入 `STRAIGHT_TURN_FAULT_POST_TIMEOUT`。
 
 - [ ] **Step 7: 重置所有新增状态并做静态检查**
 
