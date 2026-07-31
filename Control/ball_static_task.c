@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #define BALL_STATIC_POS_TARGET_MM (50.0f)
-#define BALL_STATIC_NEG_TARGET_MM (-55.0f)
+#define BALL_STATIC_NEG_TARGET_MM (-60.0f)
 #define BALL_STATIC_START_TOLERANCE_MM (5.0f)
 #define BALL_STATIC_READY_TIME_MS (200UL)
 #define BALL_STATIC_VISION_TIMEOUT_MS (200UL)
@@ -74,9 +74,9 @@ static uint8_t target_is_stable(
     float target_mm)
 {
     return (absolute_float(position_mm - target_mm) <=
-            BALL_STATIC_SETTLE_TOLERANCE_MM &&
+                BALL_STATIC_SETTLE_TOLERANCE_MM &&
             absolute_float(velocity_mm_s) <=
-            BALL_STATIC_SETTLE_VELOCITY_MM_S)
+                BALL_STATIC_SETTLE_VELOCITY_MM_S)
                ? 1U
                : 0U;
 }
