@@ -1,5 +1,6 @@
 #include "ball_balance.h"
 
+#include "ball_position_feedforward.h"
 #include "ball_state_observer.h"
 #include "servo.h"
 
@@ -11,12 +12,6 @@
 #define BALL_BALANCE_BRAKING_ACCEL_MM_S2    (180.0f)
 #define BALL_BALANCE_CONTROL_MIN_PULSE_US   (800U)
 #define BALL_BALANCE_CONTROL_MAX_PULSE_US   (1800U)
-#define BALL_BALANCE_MIN_CORRECTION_US      \
-    ((float)BALL_BALANCE_CONTROL_MIN_PULSE_US - \
-     (float)SERVO_NEUTRAL_PULSE_US)
-#define BALL_BALANCE_MAX_CORRECTION_US      \
-    ((float)BALL_BALANCE_CONTROL_MAX_PULSE_US - \
-     (float)SERVO_NEUTRAL_PULSE_US)
 #define BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S (1.0f)
 
 volatile float ball_balance_target_mm = BALL_BALANCE_TARGET_MM;
@@ -37,6 +32,8 @@ volatile float ball_balance_measured_velocity_mm_s;
 volatile float ball_balance_estimated_acceleration_mm_s2;
 volatile float ball_balance_vehicle_acceleration_mps2;
 volatile float ball_balance_acceleration_feedforward_us;
+volatile float ball_balance_position_feedforward_us =
+    SERVO_NEUTRAL_PULSE_US;
 volatile float ball_balance_proportional_us;
 volatile float ball_balance_derivative_us;
 volatile uint32_t ball_balance_update_count;
@@ -120,16 +117,14 @@ static void reset_controller_state(void)
     ball_balance_derivative_us = 0.0f;
 }
 
-static void set_control_pulse(float correction_us)
+static void set_control_pulse(
+    float base_pulse_us,
+    float correction_us)
 {
     uint16_t pulse_us;
 
-    correction_us = clamp_float(
-        correction_us,
-        BALL_BALANCE_MIN_CORRECTION_US,
-        BALL_BALANCE_MAX_CORRECTION_US);
     pulse_us = quantize_control_pulse(
-        (float)SERVO_NEUTRAL_PULSE_US +
+        base_pulse_us +
         BALL_BALANCE_SERVO_DIRECTION * correction_us);
 
     ball_balance_servo_pulse_us = pulse_us;
@@ -156,7 +151,9 @@ void ball_balance_init(void)
     pid_reset_requested = 0U;
     ball_balance_status = BALL_BALANCE_DISABLED;
     reset_controller_state();
-    set_control_pulse(0.0f);
+    ball_balance_position_feedforward_us =
+        SERVO_NEUTRAL_PULSE_US;
+    set_control_pulse(SERVO_NEUTRAL_PULSE_US, 0.0f);
 }
 
 void ball_balance_set_enabled(uint8_t enabled)
@@ -175,7 +172,9 @@ void ball_balance_set_enabled(uint8_t enabled)
         ball_balance_vehicle_acceleration_mps2 = 0.0f;
     }
     reset_controller_state();
-    set_control_pulse(0.0f);
+    ball_balance_position_feedforward_us =
+        SERVO_NEUTRAL_PULSE_US;
+    set_control_pulse(SERVO_NEUTRAL_PULSE_US, 0.0f);
     ball_balance_status =
         (enabled != 0U) ? BALL_BALANCE_WAITING :
                           BALL_BALANCE_DISABLED;
@@ -281,7 +280,9 @@ void ball_balance_update(void)
             (ball_state_observer.last_frame_count == 0U) ?
                 BALL_BALANCE_WAITING : BALL_BALANCE_STALE;
         reset_controller_state();
-        set_control_pulse(0.0f);
+        ball_balance_position_feedforward_us =
+            SERVO_NEUTRAL_PULSE_US;
+        set_control_pulse(SERVO_NEUTRAL_PULSE_US, 0.0f);
         return;
     }
 
@@ -292,6 +293,8 @@ void ball_balance_update(void)
     target_position_mm = ball_balance_target_mm;
     reference_velocity_mm_s =
         ball_balance_reference_velocity_mm_s;
+    ball_balance_position_feedforward_us =
+        ball_position_feedforward_us(position_mm);
 
     position_error_mm = target_position_mm - position_mm;
     if (position_error_mm > -BALL_BALANCE_POSITION_DEADBAND_MM &&
@@ -371,10 +374,7 @@ void ball_balance_update(void)
         ball_balance_proportional_us +
         ball_balance_derivative_us +
         acceleration_feedforward_us;
-    correction_us = clamp_float(
-        correction_unsaturated_us,
-        BALL_BALANCE_MIN_CORRECTION_US,
-        BALL_BALANCE_MAX_CORRECTION_US);
+    correction_us = correction_unsaturated_us;
 
     ball_balance_target_velocity_mm_s = target_velocity_mm_s;
     ball_balance_estimated_position_mm = position_mm;
@@ -384,5 +384,7 @@ void ball_balance_update(void)
     ball_balance_acceleration_feedforward_us =
         acceleration_feedforward_us;
     ball_balance_status = BALL_BALANCE_ACTIVE;
-    set_control_pulse(correction_us);
+    set_control_pulse(
+        ball_balance_position_feedforward_us,
+        correction_us);
 }

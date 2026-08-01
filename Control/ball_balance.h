@@ -56,6 +56,7 @@ extern volatile float ball_balance_measured_velocity_mm_s;
 extern volatile float ball_balance_estimated_acceleration_mm_s2;
 extern volatile float ball_balance_vehicle_acceleration_mps2;
 extern volatile float ball_balance_acceleration_feedforward_us;
+extern volatile float ball_balance_position_feedforward_us;
 extern volatile float ball_balance_proportional_us;
 extern volatile float ball_balance_derivative_us;
 extern volatile uint32_t ball_balance_update_count;

@@ -199,9 +199,7 @@ uint8_t ball_static_task_start(void)
     if (ball_static_ready == 0U)
     {
         ball_static_fault =
-            state_is_fresh() ?
-                BALL_STATIC_FAULT_START_POSITION :
-                BALL_STATIC_FAULT_VISION;
+            state_is_fresh() ? BALL_STATIC_FAULT_START_POSITION : BALL_STATIC_FAULT_VISION;
         return 0U;
     }
 
