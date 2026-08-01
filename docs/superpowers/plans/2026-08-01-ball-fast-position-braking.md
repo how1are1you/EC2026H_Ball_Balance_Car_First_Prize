@@ -1,10 +1,12 @@
 # Ball Fast Position Braking Implementation Plan
 
+> **Superseded for latched target generation:** Use `docs/superpowers/plans/2026-08-01-ball-pi-baseline-braking.md`. This earlier plan remains as the history of the stopping-distance detector and first latch implementation.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Preserve fast step-target motion while adding measured-speed stopping-distance braking, precise endpoint acceptance, and enough diagnostics to tune overshoot without adding a position D term or a second integrator.
 
-**Architecture:** Add a small pure braking-decision module that computes stopping distance and decides when a fast approach must switch to active braking. `ball_balance` keeps the existing position PI, velocity P, acceleration damping, spatial feedforward, and vehicle acceleration feedforward; while braking is active it continuously reduces the position-loop velocity target in proportion to measured speed above the safe velocity. `ball_static_task` uses symmetric 5 mm and 10 mm/s endpoint gates.
+**Architecture:** Add a small pure braking module that computes stopping distance and a bounded soft-braking target. `ball_balance` keeps the existing position PI, velocity P, acceleration damping, spatial feedforward, and vehicle acceleration feedforward; it latches braking for the current fixed target, bases the braking target on measured speed, limits the reverse velocity error, and freezes position integration until the 5 mm/10 mm/s endpoint gate is reached. `ball_static_task` uses symmetric endpoint gates.
 
 **Tech Stack:** C99, MSPM0 DriverLib/ARMCLANG, host-side GCC assertion tests, Keil uVision project.
 
@@ -210,8 +212,10 @@ Expected: compile and executable both exit 0 with no warning or assertion.
 ```c
 extern volatile float ball_balance_stopping_distance_mm;
 extern volatile float ball_balance_safe_velocity_mm_s;
+extern volatile float ball_balance_braking_velocity_error_mm_s;
 extern volatile float ball_balance_unsaturated_pulse_us;
 extern volatile uint8_t ball_balance_braking_active;
+extern volatile uint8_t ball_balance_braking_creep_active;
 extern volatile uint8_t ball_balance_output_saturated;
 ```
 
@@ -222,7 +226,10 @@ extern volatile uint8_t ball_balance_output_saturated;
 #define BALL_BALANCE_EFFECTIVE_DELAY_S     (0.060f)
 #define BALL_BALANCE_BRAKING_MARGIN_MM     (3.0f)
 #define BALL_BALANCE_BRAKE_RELEASE_MM_S    (10.0f)
-#define BALL_BALANCE_BRAKING_EXCESS_GAIN   (0.5f)
+#define BALL_BALANCE_BRAKING_SPEED_FRACTION (0.5f)
+#define BALL_BALANCE_BRAKING_VELOCITY_ERROR_MAX_MM_S (20.0f)
+#define BALL_BALANCE_BRAKING_CREEP_VELOCITY_MM_S (10.0f)
+#define BALL_BALANCE_BRAKING_SETTLE_POSITION_MM (5.0f)
 ```
 
 - [ ] **Step 1: Extend the controller test to establish RED**
@@ -232,7 +239,9 @@ Update `tools/host_tests/test_ball_balance.c` so it:
 - derives feedforward expectations with `ball_position_feedforward_us()` instead of stale literal calibration values;
 - initializes controller gains to position Kp 2.0, Ki 0, velocity Kp 1.0, acceleration Kd 0, and velocity limit 500 mm/s;
 - verifies that `error=30 mm, velocity=60 mm/s` leaves braking inactive;
-- verifies that `error=20 mm, velocity=80 mm/s` activates braking and continuously reduces the target velocity from `40 mm/s` to `30.249 mm/s`;
+- verifies that `error=20 mm, velocity=80 mm/s` activates braking and commands approximately the `60.498 mm/s` safe velocity, limiting the velocity-loop braking error to `19.502 mm/s`;
+- verifies that braking remains latched when the instantaneous entry condition clears, uses at most `10 mm/s` creep outside the target band, and releases inside 5 mm at no more than 10 mm/s;
+- verifies that the existing position integral is frozen while braking is latched;
 - verifies that the unsaturated output and saturation flag are published;
 - sets velocity Kp to 20 and applies observer velocities of `-500 mm/s` and `+500 mm/s` at a zero target to verify clamps of `2200 us` and `500 us`;
 - retains invalid-observer neutral behavior.
@@ -285,22 +294,46 @@ if (reference_velocity_is_zero)
         &braking);
 }
 
-if (braking.braking_required != 0U)
+if (braking_entry_required != 0U)
+{
+    latch_braking_for_current_fixed_target();
+}
+
+if (soft_braking_active != 0U)
 {
     speed_excess_mm_s =
         max(abs(velocity_mm_s) - braking.safe_velocity_mm_s, 0.0f);
-    braking_target_magnitude_mm_s =
-        max(abs(target_velocity_mm_s) -
-                BALL_BALANCE_BRAKING_EXCESS_GAIN *
-                    speed_excess_mm_s,
-            0.0f);
+    braking_velocity_error_mm_s =
+        min(speed_excess_mm_s,
+            BALL_BALANCE_BRAKING_SPEED_FRACTION *
+                abs(velocity_mm_s),
+            BALL_BALANCE_BRAKING_VELOCITY_ERROR_MAX_MM_S);
+
+    if (abs(position_error_mm) >
+            BALL_BALANCE_BRAKING_SETTLE_POSITION_MM &&
+        abs(velocity_mm_s) <=
+            BALL_BALANCE_BRAKE_RELEASE_MM_S)
+    {
+        braking_target_magnitude_mm_s =
+            min(abs(target_velocity_mm_s),
+                BALL_BALANCE_BRAKING_CREEP_VELOCITY_MM_S);
+    }
+    else
+    {
+        braking_target_magnitude_mm_s =
+            max(abs(velocity_mm_s) -
+                    braking_velocity_error_mm_s,
+                0.0f);
+    }
+
     target_velocity_mm_s =
-        sign(position_error_mm) * braking_target_magnitude_mm_s;
-    ball_balance_braking_active = 1U;
+        sign(position_error_mm) *
+        braking_target_magnitude_mm_s;
+    freeze_position_integral();
 }
 ```
 
-Publish stopping distance and safe velocity on every valid update. This avoids the early-brake zero-speed step that can stop the ball short and force a second acceleration. When reference velocity is non-zero or the ball is moving away from the target, keep braking inactive.
+Publish stopping distance, safe velocity, bounded braking velocity error, latch state, and creep state on every valid update. Release the latch inside 5 mm at no more than 10 mm/s, or when the target changes, reference velocity becomes non-zero, the ball moves away from the target, or controller/vision state resets.
 
 - [ ] **Step 6: Preserve the existing feedback law**
 

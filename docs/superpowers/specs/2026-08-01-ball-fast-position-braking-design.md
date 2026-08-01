@@ -1,5 +1,77 @@
 # 小球快速定点与提前制动控制设计
 
+## 最终结构修订：位置 PI 主控与连续距离限速
+
+多轮上板结果表明，锁存制动、目标带外爬行下限和分段反向制动力限制会让
+速度目标被状态机接管，产生“强制动后完全停住再启动”。本节是最终批准的
+控制结构，取代本文后续保留的历史制动方案；后续历史内容只用于说明调试
+过程，不再作为实现依据。
+
+位置 PI 每个控制周期持续生成基础目标速度：
+
+```text
+v_pid =
+    reference_velocity
+    + Kp_position * position_error
+    + Ki_position * position_integral
+```
+
+固定位置目标且 `abs(position_error) > 5 mm` 时，根据当前剩余距离实时
+计算连续速度上限：
+
+```text
+d = abs(position_error)
+a_profile = 30 mm/s^2
+T_delay = 0.060 s
+aT = a_profile * T_delay
+
+v_distance =
+    sqrt(aT * aT + 2 * a_profile * d) - aT
+
+v_target =
+    sign(v_pid) * min(abs(v_pid), v_distance)
+```
+
+该公式由 `d = v * T_delay + v^2 / (2 * a_profile)` 解出。它不是预先按
+时间生成的平滑轨迹，而是每 5 ms 根据实际位置重新计算的状态反馈上限。
+当前估计速度不再用于切换制动状态，而是始终由速度环直接比较：
+
+```text
+velocity_error = v_target - estimated_velocity
+u_velocity = Kp_velocity * velocity_error
+```
+
+因此速度高于距离允许值时速度环自动制动；速度低于目标时控制量会在速度
+降到零前连续变为正向，不需要锁存、爬行阶段或重启阶段。
+
+最后 `5 mm` 内不应用距离上限，直接交给位置 PI。这样保留位置积分对水管
+局部坡度和前馈残差的修正能力。距离上限生效时冻结积分候选值作为抗积分
+饱和；退出限速后恢复原有积分规则。
+
+第一轮上板保持以下参数不变：
+
+```text
+Kp_position = 2.0
+Ki_position = 0.05
+Kp_velocity = 4.7
+Kd_acceleration = 0.12
+velocity_max = 150 mm/s
+```
+
+新增参数与诊断量：
+
+```text
+BALL_BALANCE_DISTANCE_PROFILE_ACCEL_MM_S2 = 30.0
+BALL_BALANCE_DISTANCE_LIMIT_MIN_ERROR_MM = 5.0
+ball_balance_position_pid_velocity_mm_s
+ball_balance_distance_velocity_limit_mm_s
+ball_balance_distance_limited
+```
+
+删除运行路径中的制动锁存、停止距离进入判定、软制动目标、爬行下限和
+对应状态。位置前馈、车辆加速度前馈、视觉失效保护、输出限幅和 5 us
+量化保持不变。
+
 ## 背景
 
 竞赛 H 题对小球控制包含两类工况：
@@ -157,23 +229,38 @@ braking_entry_required =
 位置 PI 重新加速后再次进入制动。锁存只属于当前固定位置目标；目标改变、
 视觉失效、参考速度变为非零或小球已经反向远离目标时立即清除。
 
-锁存制动阶段的目标速度以当前实际速度为基准，而不是继续从位置 PI 目标
-上减去速度超差：
+上板结果表明，以当前实际速度为基准生成目标会把位置 PI 原本已经给出的
+制动量抵消掉：`0 -> +50 mm` 过冲约 10 mm，`-50 -> +50 mm` 过冲约
+25 mm，并在越过目标后反向回退。因此锁存制动阶段改为以位置 PI 为主制动
+基线，安全速度超差只增加制动量，同时限制单帧允许的最大制动速度误差：
 
 ```text
 if soft_braking_active:
     speed_excess = max(abs(v) - v_safe, 0)
-    brake_delta_v = min(
-        speed_excess,
-        k_speed_fraction * abs(v),
-        brake_velocity_error_max)
+    aggressive_target =
+        max(abs(v_pi_limited)
+            - braking_excess_gain * speed_excess,
+            0)
 
-    if abs(e) > settle_position and abs(v) <= v_release:
-        target_magnitude =
+    if abs(e) > settle_position:
+        creep_floor =
             min(abs(v_pi_limited), braking_creep_velocity)
-    else:
         target_magnitude =
-            max(abs(v) - brake_delta_v, 0)
+            clamp(
+                aggressive_target,
+                creep_floor,
+                max(abs(v), creep_floor))
+    else:
+        max_brake_delta =
+            min(max_braking_speed_fraction * abs(v),
+                brake_velocity_error_max)
+        minimum_target =
+            max(abs(v) - max_brake_delta, 0)
+        target_magnitude =
+            clamp(
+                aggressive_target,
+                minimum_target,
+                abs(v))
 
     v_target = sign(e) * target_magnitude
 else:
@@ -181,10 +268,12 @@ else:
 ```
 
 其中 `v_pi_limited = clamp(v_pi, -velocity_limit, velocity_limit)`。
-`brake_delta_v` 就是速度内环在制动阶段允许使用的反向速度误差，既不超过
-理论安全速度超差，也不超过当前实际速度的一定比例和绝对上限。因此高速
-时能够有效制动，低速时制动力会自动减小，不会在最后几毫米继续施加强
-反向倾角。
+目标带外的 `aggressive_target` 恢复最初版本的位置 PI 强制动，并将
+`braking_excess_gain` 提高到 `0.5`。`creep_floor` 保证长行程即使提前
+降到低速也不会完全停住；上限 `max(abs(v), creep_floor)` 禁止恢复远端
+高速加速，但允许从静止连续加速到爬行速度。进入最后 5 mm 后才启用
+`minimum_target`，将速度内环反向误差限制为当前速度的一定比例和绝对
+上限，保留已经验证有效的防回退特性。
 
 若小球在目标带外提前降到低速，锁存制动阶段不退出，而是以不超过
 `braking_creep_velocity` 的速度继续靠近，避免恢复远端位置 PI 后再次
@@ -202,21 +291,37 @@ a_stop = 150 mm/s^2
 T_delay = 0.060 s
 d_margin = 3 mm
 v_release = 10 mm/s
-k_speed_fraction = 0.5
-brake_velocity_error_max = 20 mm/s
-braking_creep_velocity = 10 mm/s
+braking_excess_gain = 0.5
+max_braking_speed_fraction = 0.6
+brake_velocity_error_max = 50 mm/s
+braking_creep_velocity = 25 mm/s
 settle_position = 5 mm
 ```
 
 以 `e=20 mm`、`v=80 mm/s`、`v_safe` 约为 `60 mm/s` 为例，
-`v_target` 约为 `60 mm/s`，速度内环制动误差约为 `-20 mm/s`；以
-`e=4 mm`、`v=20 mm/s`、`v_safe=0` 为例，`v_target=10 mm/s`，
-制动误差为 `-10 mm/s`。这比当前从较小位置 PI 目标上继续减去超差的
-做法更柔和，并且不会把末端目标速度直接压到零。
+位置 PI 目标约为 `40 mm/s`，最终 `v_target` 约为 `30.249 mm/s`，速度
+内环制动误差约为 `-49.751 mm/s`；以
+`e=4 mm`、`v=20 mm/s`、`v_safe=0` 为例，`v_target=8 mm/s`，
+制动误差被限制为 `-12 mm/s`。前者恢复长行程
+高速制动力，后者防止末端目标速度被压得过低而产生反向回退。
 
 这些值对应的不是最终标定结果。第一次上板保持 `a_stop`、`T_delay`、
 `d_margin` 和现有 PID 参数不变，只替换制动目标计算和锁存逻辑，避免
 同时改变多个变量。
+
+PI 主制动加全程最大制动力限制的版本上板后，反向回退和二次往返基本
+消失，但制动体感明显偏软；将 `a_stop` 降至 `120 mm/s^2` 只让柔软减速
+更早开始，并没有恢复最初版本快速制动的效果。因此最终混合方案恢复
+`a_stop=150 mm/s^2` 和目标带外强制动，只在最后 5 mm 保留最大反向
+制动力限制，并用锁存爬行解决长行程提前停住后重新高速加速的问题。
+
+混合强制动版本恢复了快速制动，但 `10 mm/s` 的目标带外最低速度仍会让
+小球完全停住再启动。按 `a_stop * T_delay = 150 * 0.060 = 9 mm/s`
+估算，撤掉强制动后仍可能损失约 `9 mm/s`，原来的速度裕量不足。因此将
+目标带外最低连续靠近速度先提高到 `20 mm/s`，随后按单变量上板反馈继续
+放宽到 `25 mm/s`；锁存解除和任务到达速度
+阈值仍保持 `10 mm/s`。这样只提前撤掉低速阶段的反向制动力，不削弱
+高速强制动，也不放宽最终定位标准。
 
 ### 速度阻尼与加速度阻尼
 
@@ -308,9 +413,10 @@ abs(v) <= 10 mm/s
 2. 暂时令位置 `Ki = 0`、加速度阻尼 `Kd_velocity = 0`，只调
    `Kp_position` 和 `Kp_velocity`。
 3. 保持远端响应速度，逐步增强速度阻尼，直到无持续振荡。
-4. 启用锁存柔和制动，先保持停止距离参数不变。若整体制动力不足，先增加
-   `k_speed_fraction`，再增加 `brake_velocity_error_max`；若末端仍有
-   反向回退，先减小 `brake_velocity_error_max`。一次只修改一个值。
+4. 启用锁存柔和制动，先保持停止距离参数不变。若长行程高速阶段制动力
+   不足，先增加 `braking_excess_gain`；若低速末端仍有反向回退，
+   先减小 `max_braking_speed_fraction` 或
+   `brake_velocity_error_max`。一次只修改一个值。
 5. 柔和制动力确定后，再调 `a_stop`、`T_delay` 和 `d_margin`。
    过冲大但制动力已经合适时，减小 `a_stop`、增大 `T_delay` 或增大
    `d_margin`，让减速更早开始；制动过早时反向调整。
@@ -342,7 +448,7 @@ abs(v) <= 10 mm/s
 - 延迟增加时停止距离单调增加；
 - 正在远离目标时不启用制动速度限制；
 - 剩余距离小于延迟距离和安全余量时，安全速度为零；
-- 柔和制动目标的速度误差不超过当前速度比例和绝对上限；
+- 最后 5 mm 内制动目标的反向速度误差不超过当前速度比例和绝对上限；
 - 低速且仍在目标带外时只给出不超过 10 mm/s 的靠近目标速度；
 - 异常和边界输入不会产生 NaN、无穷或负平方根。
 
@@ -350,10 +456,10 @@ abs(v) <= 10 mm/s
 
 - 远离目标且速度低时保持原有快速位置 PI 输出；
 - 高速接近目标且停止距离达到剩余距离时，`braking_active` 锁存；
-- `e=20 mm`、`v=80 mm/s` 时目标速度约为安全速度，而不是从位置 PI
-  目标继续大幅下调；
-- `e=4 mm`、`v=20 mm/s`、`v_safe=0` 时目标速度为 `10 mm/s`，
-  不直接变为零；
+- `e=20 mm`、`v=80 mm/s` 时目标速度约为 `30.249 mm/s`，恢复最初
+  版本的位置 PI 强制动；
+- `e=4 mm`、`v=20 mm/s`、`v_safe=0` 时目标速度为 `8 mm/s`，
+  最大反向速度误差限制为 `12 mm/s`；
 - 瞬时离开制动进入条件不会恢复远端位置 PI 并再次加速；
 - 进入目标带且低于释放速度后解除锁存并恢复位置 PI；
 - 制动锁存期间位置积分不继续累积；

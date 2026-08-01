@@ -32,14 +32,14 @@ volatile float ball_balance_position_feedforward_us =
     SERVO_NEUTRAL_PULSE_US;
 volatile float ball_balance_proportional_us;
 volatile float ball_balance_derivative_us;
-volatile float ball_balance_stopping_distance_mm;
-volatile float ball_balance_safe_velocity_mm_s;
+volatile float ball_balance_position_pid_velocity_mm_s;
+volatile float ball_balance_distance_velocity_limit_mm_s;
 volatile float ball_balance_unsaturated_pulse_us =
     SERVO_NEUTRAL_PULSE_US;
 volatile uint32_t ball_balance_update_count;
 volatile uint16_t ball_balance_servo_pulse_us =
     SERVO_NEUTRAL_PULSE_US;
-volatile uint8_t ball_balance_braking_active;
+volatile uint8_t ball_balance_distance_limited;
 volatile uint8_t ball_balance_output_saturated;
 volatile ball_balance_status_t ball_balance_status =
     BALL_BALANCE_DISABLED;
@@ -59,6 +59,11 @@ static float clamp_float(float value, float minimum, float maximum)
         return maximum;
     }
     return value;
+}
+
+static float absolute_float(float value)
+{
+    return (value < 0.0f) ? -value : value;
 }
 
 static uint16_t quantize_control_pulse(float requested_pulse_us)
@@ -117,9 +122,9 @@ static void reset_controller_state(void)
     ball_balance_acceleration_feedforward_us = 0.0f;
     ball_balance_proportional_us = 0.0f;
     ball_balance_derivative_us = 0.0f;
-    ball_balance_stopping_distance_mm = 0.0f;
-    ball_balance_safe_velocity_mm_s = 0.0f;
-    ball_balance_braking_active = 0U;
+    ball_balance_position_pid_velocity_mm_s = 0.0f;
+    ball_balance_distance_velocity_limit_mm_s = 0.0f;
+    ball_balance_distance_limited = 0U;
 }
 
 static void set_control_pulse(
@@ -274,10 +279,8 @@ void ball_balance_update(void)
     float correction_unsaturated_us;
     float acceleration_feedforward_us;
     float position_integral_candidate_mm_s;
-    float speed_excess_mm_s;
-    float braking_target_magnitude_mm_s;
+    float distance_velocity_limit_mm_s;
     uint8_t integral_candidate_allowed;
-    ball_braking_result_t braking_result;
 
     ball_balance_update_count++;
 
@@ -348,47 +351,36 @@ void ball_balance_update(void)
             ? 1U
             : 0U;
 
-    ball_balance_stopping_distance_mm = 0.0f;
-    ball_balance_safe_velocity_mm_s = 0.0f;
-    ball_balance_braking_active = 0U;
+    ball_balance_position_pid_velocity_mm_s =
+        target_velocity_mm_s;
+    ball_balance_distance_velocity_limit_mm_s = 0.0f;
+    ball_balance_distance_limited = 0U;
     if (reference_velocity_mm_s >
             -BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S &&
         reference_velocity_mm_s <
-            BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S &&
-        ball_braking_calculate(
-            raw_position_error_mm,
-            velocity_mm_s,
-            BALL_BALANCE_STOPPING_ACCEL_MM_S2,
-            BALL_BALANCE_EFFECTIVE_DELAY_S,
-            BALL_BALANCE_BRAKING_MARGIN_MM,
-            BALL_BALANCE_BRAKE_RELEASE_MM_S,
-            &braking_result) != 0U)
+            BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S)
     {
-        ball_balance_stopping_distance_mm =
-            braking_result.stopping_distance_mm;
-        ball_balance_safe_velocity_mm_s =
-            braking_result.safe_velocity_mm_s;
-        if (braking_result.braking_required != 0U)
+        if (ball_braking_calculate_distance_velocity_limit(
+                raw_position_error_mm,
+                BALL_BALANCE_DISTANCE_PROFILE_ACCEL_MM_S2,
+                BALL_BALANCE_EFFECTIVE_DELAY_S,
+                &distance_velocity_limit_mm_s) !=
+            0U)
         {
-            speed_excess_mm_s =
-                ((velocity_mm_s < 0.0f) ?
-                     -velocity_mm_s : velocity_mm_s) -
-                braking_result.safe_velocity_mm_s;
-            braking_target_magnitude_mm_s =
-                ((target_velocity_mm_s < 0.0f) ?
-                     -target_velocity_mm_s :
-                     target_velocity_mm_s) -
-                BALL_BALANCE_BRAKING_EXCESS_GAIN *
-                    speed_excess_mm_s;
-            if (braking_target_magnitude_mm_s < 0.0f)
+            ball_balance_distance_velocity_limit_mm_s =
+                distance_velocity_limit_mm_s;
+            if (absolute_float(raw_position_error_mm) >
+                    BALL_BALANCE_DISTANCE_LIMIT_MIN_ERROR_MM &&
+                absolute_float(target_velocity_mm_s) >
+                    ball_balance_distance_velocity_limit_mm_s)
             {
-                braking_target_magnitude_mm_s = 0.0f;
+                target_velocity_mm_s =
+                    (target_velocity_mm_s < 0.0f)
+                        ? -ball_balance_distance_velocity_limit_mm_s
+                        : ball_balance_distance_velocity_limit_mm_s;
+                ball_balance_distance_limited = 1U;
+                integral_candidate_allowed = 0U;
             }
-            target_velocity_mm_s =
-                (raw_position_error_mm < 0.0f) ?
-                    -braking_target_magnitude_mm_s :
-                    braking_target_magnitude_mm_s;
-            ball_balance_braking_active = 1U;
         }
     }
 

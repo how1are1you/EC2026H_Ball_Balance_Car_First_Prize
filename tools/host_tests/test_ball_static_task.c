@@ -79,26 +79,26 @@ int main(void)
     step_observer(50.0f, 11.0f);
     assert(ball_static_state == BALL_STATIC_MOVE_POS);
 
-    step_observer(50.0f, 0.0f);
+    step_observer(41.0f, 0.0f);
     assert(ball_static_state == BALL_STATIC_HOLD_POS);
 
-    step_observer(44.0f, 0.0f);
+    step_observer(40.0f, 0.0f);
     assert(ball_static_state == BALL_STATIC_MOVE_POS);
 
-    step_observer(50.0f, 0.0f);
+    step_observer(41.0f, 0.0f);
     assert(ball_static_state == BALL_STATIC_HOLD_POS);
-    hold_observer(50.0f, 0.0f, 95U);
+    hold_observer(41.0f, 0.0f, 95U);
     assert(ball_static_state == BALL_STATIC_HOLD_POS);
-    step_observer(50.0f, 0.0f);
+    step_observer(41.0f, 0.0f);
     assert(ball_static_state == BALL_STATIC_MOVE_NEG);
     assert(fake_reference_position_mm == -50.0f);
     assert(fake_reference_velocity_mm_s == 0.0f);
 
-    step_observer(-50.0f, 0.0f);
+    step_observer(-41.0f, 0.0f);
     assert(ball_static_state == BALL_STATIC_HOLD_NEG);
-    hold_observer(-50.0f, 0.0f, 295U);
+    hold_observer(-41.0f, 0.0f, 295U);
     assert(ball_static_state == BALL_STATIC_HOLD_NEG);
-    step_observer(-50.0f, 0.0f);
+    step_observer(-41.0f, 0.0f);
     assert(ball_static_state == BALL_STATIC_DONE);
     assert(fake_servo_pulse_us >= SERVO_CONTROL_MIN_PULSE_US);
     assert(fake_servo_pulse_us <= SERVO_CONTROL_MAX_PULSE_US);

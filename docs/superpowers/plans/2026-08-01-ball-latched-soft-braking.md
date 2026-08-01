@@ -1,5 +1,7 @@
 # Latched Soft Braking Implementation Plan
 
+> **Superseded for target generation:** Hardware results showed that the actual-speed-based target in this plan was under-braked. Use `docs/superpowers/plans/2026-08-01-ball-pi-baseline-braking.md` for the approved PI-baseline revision. This file remains as the implementation history for latch, creep, release, and integral-freeze behavior.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make 100 mm ball-position moves decelerate monotonically through the final 5 mm without reverse rebound or brake-release reacceleration, while preserving the existing fast far-field position response.
@@ -736,4 +738,4 @@ no second high-speed acceleration
 stable endpoint error <= 5 mm
 ```
 
-If the overall braking force is insufficient, increase `BALL_BALANCE_BRAKING_SPEED_FRACTION` first. If endpoint reversal remains, decrease `BALL_BALANCE_BRAKING_VELOCITY_ERROR_MAX_MM_S` first. Change only one constant per hardware test batch.
+If the 100 mm move still enters the endpoint too fast, increase `BALL_BALANCE_BRAKING_VELOCITY_ERROR_MAX_MM_S` first. If low-speed endpoint reversal remains, decrease `BALL_BALANCE_BRAKING_SPEED_FRACTION` first. Change only one constant per hardware test batch.
