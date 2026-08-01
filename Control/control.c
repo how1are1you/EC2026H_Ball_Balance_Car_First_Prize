@@ -448,13 +448,19 @@ void Key(void)
             if (Flag_Stop)
             {
                 Reset_Velocity_PI();
-                StraightTurnTest_Start(
-                    (Run_Mode == RUN_MODE_BALL_LAP) ?
-                        STRAIGHT_TURN_BALL_SPEED_MPS :
+                if (Run_Mode == RUN_MODE_BALL_LAP)
+                {
+                    StraightTurnTest_StartWithPostLap(
+                        STRAIGHT_TURN_BALL_SPEED_MPS,
+                        STRAIGHT_TURN_BALL_ACCELERATION_MPS2,
+                        STRAIGHT_TURN_BALL_POST_LAP_DISTANCE_M);
+                }
+                else
+                {
+                    StraightTurnTest_Start(
                         STRAIGHT_TURN_FAST_SPEED_MPS,
-                    (Run_Mode == RUN_MODE_BALL_LAP) ?
-                        STRAIGHT_TURN_BALL_ACCELERATION_MPS2 :
                         STRAIGHT_TURN_FAST_ACCELERATION_MPS2);
+                }
             }
             else
             {
