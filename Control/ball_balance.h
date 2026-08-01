@@ -23,6 +23,11 @@
 #define BALL_BALANCE_ACCELERATION_FF_US_PER_MPS2 (1150.0f)
 #define BALL_BALANCE_ACCELERATION_FF_LIMIT_US (115.0f)
 #define BALL_BALANCE_VEHICLE_ACCELERATION_LIMIT_MPS2 (1.0f)
+#define BALL_BALANCE_STOPPING_ACCEL_MM_S2 (150.0f)
+#define BALL_BALANCE_EFFECTIVE_DELAY_S (0.060f)
+#define BALL_BALANCE_BRAKING_MARGIN_MM (3.0f)
+#define BALL_BALANCE_BRAKE_RELEASE_MM_S (10.0f)
+#define BALL_BALANCE_BRAKING_EXCESS_GAIN (0.25f)
 
 #define BALL_BALANCE_POSITION_KP_MIN (0.0f)
 #define BALL_BALANCE_POSITION_KP_MAX (20.0f)
@@ -59,8 +64,13 @@ extern volatile float ball_balance_acceleration_feedforward_us;
 extern volatile float ball_balance_position_feedforward_us;
 extern volatile float ball_balance_proportional_us;
 extern volatile float ball_balance_derivative_us;
+extern volatile float ball_balance_stopping_distance_mm;
+extern volatile float ball_balance_safe_velocity_mm_s;
+extern volatile float ball_balance_unsaturated_pulse_us;
 extern volatile uint32_t ball_balance_update_count;
 extern volatile uint16_t ball_balance_servo_pulse_us;
+extern volatile uint8_t ball_balance_braking_active;
+extern volatile uint8_t ball_balance_output_saturated;
 extern volatile ball_balance_status_t ball_balance_status;
 
 void ball_balance_init(void);

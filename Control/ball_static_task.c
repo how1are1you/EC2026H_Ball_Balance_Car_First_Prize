@@ -69,12 +69,14 @@ static uint8_t state_is_fresh(void)
 static uint8_t target_is_stable(
     float position_mm,
     float velocity_mm_s,
-    float target_mm)
+    float target_mm,
+    float tolerance_mm,
+    float velocity_threshold_mm_s)
 {
     return (absolute_float(position_mm - target_mm) <=
-                BALL_STATIC_SETTLE_TOLERANCE_MM &&
+                tolerance_mm &&
             absolute_float(velocity_mm_s) <=
-                BALL_STATIC_SETTLE_VELOCITY_MM_S)
+                velocity_threshold_mm_s)
                ? 1U
                : 0U;
 }
@@ -330,7 +332,9 @@ void ball_static_task_update(void)
         if (target_is_stable(
                 position_mm,
                 velocity_mm_s,
-                BALL_STATIC_POS_TARGET_MM) != 0U)
+                BALL_STATIC_POS_TARGET_MM,
+                BALL_STATIC_SETTLE_TOLERANCE_MM,
+                BALL_STATIC_SETTLE_VELOCITY_MM_S) != 0U)
         {
             ball_static_state = BALL_STATIC_HOLD_POS;
             settle_start_ms = now_ms;
@@ -348,7 +352,9 @@ void ball_static_task_update(void)
         if (target_is_stable(
                 position_mm,
                 velocity_mm_s,
-                BALL_STATIC_POS_TARGET_MM) == 0U)
+                BALL_STATIC_POS_TARGET_MM,
+                BALL_STATIC_SETTLE_TOLERANCE_MM,
+                BALL_STATIC_SETTLE_VELOCITY_MM_S) == 0U)
         {
             ball_static_state = BALL_STATIC_MOVE_POS;
             settle_start_ms = 0U;
@@ -376,7 +382,9 @@ void ball_static_task_update(void)
         if (target_is_stable(
                 position_mm,
                 velocity_mm_s,
-                BALL_STATIC_NEG_TARGET_MM) != 0U)
+                BALL_STATIC_NEG_TARGET_MM,
+                BALL_STATIC_SETTLE_TOLERANCE_MM,
+                BALL_STATIC_SETTLE_VELOCITY_MM_S) != 0U)
         {
             ball_static_state = BALL_STATIC_HOLD_NEG;
             settle_start_ms = now_ms;
@@ -390,7 +398,9 @@ void ball_static_task_update(void)
         if (target_is_stable(
                 position_mm,
                 velocity_mm_s,
-                BALL_STATIC_NEG_TARGET_MM) == 0U)
+                BALL_STATIC_NEG_TARGET_MM,
+                BALL_STATIC_SETTLE_TOLERANCE_MM,
+                BALL_STATIC_SETTLE_VELOCITY_MM_S) == 0U)
         {
             ball_static_state = BALL_STATIC_MOVE_NEG;
             settle_start_ms = 0U;

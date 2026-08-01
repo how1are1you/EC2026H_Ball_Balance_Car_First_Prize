@@ -45,6 +45,7 @@
 ".\objects\vision_protocol.o"
 ".\objects\ball_state_observer.o"
 ".\objects\ball_balance.o"
+".\objects\ball_braking.o"
 ".\objects\ball_position_feedforward.o"
 ".\objects\ball_position_capture.o"
 ".\objects\ball_hold_lap.o"

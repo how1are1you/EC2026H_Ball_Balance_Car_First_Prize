@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 
 volatile unsigned long tick_ms;
 volatile float vision_ball_position_mm;
@@ -28,10 +29,22 @@ uint16_t servo_get_pulse_us(void)
     return fake_servo_pulse_us;
 }
 
-static void assert_close(float actual, float expected)
+static void assert_close_at(float actual, float expected, int line)
 {
-    assert(fabsf(actual - expected) < 0.001f);
+    if (fabsf(actual - expected) >= 0.001f)
+    {
+        fprintf(
+            stderr,
+            "line %d: expected %.3f, got %.3f\n",
+            line,
+            expected,
+            actual);
+        assert(0);
+    }
 }
+
+#define assert_close(actual, expected) \
+    assert_close_at((actual), (expected), __LINE__)
 
 int main(void)
 {
@@ -52,21 +65,78 @@ int main(void)
     assert(ball_balance_update_count == 1U);
     assert_close(ball_balance_proportional_us, -10.0f);
     assert_close(ball_balance_derivative_us, -20.0f);
-    assert(fake_servo_pulse_us == 1400U);
+    assert_close(ball_balance_unsaturated_pulse_us, 1345.0f);
+    assert(ball_balance_output_saturated == 0U);
+    assert(ball_balance_braking_active == 0U);
+    assert(fake_servo_pulse_us == 1345U);
 
-    ball_state_observer.position_mm = 50.0f;
-    ball_state_observer.velocity_mm_s = 0.0f;
+    assert(ball_balance_set_cascade_gains(
+               2.0f, 0.0f, 1.0f, 0.0f, 500.0f) == 1U);
+    ball_state_observer.position_mm = 20.0f;
+    ball_state_observer.velocity_mm_s = 60.0f;
     ball_state_observer.acceleration_mm_s2 = 0.0f;
-    ball_balance_set_reference(-50.0f, 0.0f);
+    ball_balance_set_reference(50.0f, 0.0f);
     ball_balance_update();
     assert(ball_balance_update_count == 2U);
-    assert_close(ball_balance_position_feedforward_us, 1485.0f);
+    assert_close(ball_balance_target_velocity_mm_s, 60.0f);
+    assert_close(ball_balance_stopping_distance_mm, 18.6f);
+    assert(ball_balance_braking_active == 0U);
+    assert_close(ball_balance_unsaturated_pulse_us, 1403.0f);
+    assert(fake_servo_pulse_us == 1405U);
+
+    ball_state_observer.position_mm = 30.0f;
+    ball_state_observer.velocity_mm_s = 80.0f;
+    ball_balance_update();
+    assert(ball_balance_update_count == 3U);
+    assert_close(ball_balance_target_velocity_mm_s, 30.249f);
+    assert_close(ball_balance_stopping_distance_mm, 29.133f);
+    assert_close(ball_balance_safe_velocity_mm_s, 60.498f);
+    assert(ball_balance_braking_active == 1U);
+    assert_close(ball_balance_proportional_us, -49.751f);
     assert_close(ball_balance_derivative_us, 0.0f);
-    assert(fake_servo_pulse_us == 1485U);
+    assert_close(ball_balance_unsaturated_pulse_us, 1369.249f);
+    assert(ball_balance_output_saturated == 0U);
+    assert(fake_servo_pulse_us == 1370U);
+
+    assert(ball_balance_set_cascade_gains(
+               0.0f, 0.0f, 20.0f, 0.0f, 500.0f) == 1U);
+    ball_state_observer.position_mm = 0.0f;
+    ball_state_observer.velocity_mm_s = -500.0f;
+    ball_balance_set_reference(0.0f, 0.0f);
+    ball_balance_update();
+    assert(ball_balance_update_count == 4U);
+    assert(ball_balance_output_saturated == 1U);
+    assert(ball_balance_unsaturated_pulse_us > 2200.0f);
+    assert(fake_servo_pulse_us == SERVO_CONTROL_MAX_PULSE_US);
+
+    ball_state_observer.velocity_mm_s = 500.0f;
+    ball_balance_update();
+    assert(ball_balance_update_count == 5U);
+    assert(ball_balance_output_saturated == 1U);
+    assert(ball_balance_unsaturated_pulse_us < 500.0f);
+    assert(fake_servo_pulse_us == SERVO_CONTROL_MIN_PULSE_US);
+
+    assert(ball_balance_set_cascade_gains(
+               0.0f, 1.0f, 20.0f, 0.0f, 500.0f) == 1U);
+    ball_state_observer.position_mm = 0.0f;
+    ball_state_observer.velocity_mm_s = -500.0f;
+    ball_balance_set_reference(100.0f, 0.0f);
+    for (tick_ms = 0U; tick_ms < 100U; tick_ms++)
+    {
+        ball_balance_update();
+        assert(ball_balance_output_saturated == 1U);
+    }
+
+    ball_state_observer.velocity_mm_s = 0.0f;
+    ball_balance_update();
+    assert(ball_balance_target_velocity_mm_s < 1.0f);
+    assert(ball_balance_output_saturated == 0U);
 
     ball_state_observer.valid = 0U;
     ball_balance_update();
-    assert(ball_balance_update_count == 3U);
+    assert(ball_balance_update_count == 107U);
+    assert(ball_balance_output_saturated == 0U);
+    assert(ball_balance_braking_active == 0U);
     assert(fake_servo_pulse_us == SERVO_NEUTRAL_PULSE_US);
 
     return 0;

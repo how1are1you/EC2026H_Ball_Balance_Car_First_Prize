@@ -645,6 +645,11 @@
               <FilePath>..\Control\ball_balance.c</FilePath>
             </File>
             <File>
+              <FileName>ball_braking.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_braking.c</FilePath>
+            </File>
+            <File>
               <FileName>ball_position_feedforward.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Control\ball_position_feedforward.c</FilePath>
