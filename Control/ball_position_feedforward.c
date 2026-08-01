@@ -1,11 +1,16 @@
 #include "ball_position_feedforward.h"
 
+#define BALL_FEEDFORWARD_NEG_MAX_POSITION_MM (-50.0f)
+#define BALL_FEEDFORWARD_NEG_MID_POSITION_MM (-25.0f)
 #define BALL_FEEDFORWARD_ZERO_POSITION_MM (0.0f)
-#define BALL_FEEDFORWARD_MID_POSITION_MM  (25.0f)
-#define BALL_FEEDFORWARD_MAX_POSITION_MM  (50.0f)
-#define BALL_FEEDFORWARD_ZERO_PULSE_US    (1320.0f)
-#define BALL_FEEDFORWARD_MID_PULSE_US     (1390.0f)
-#define BALL_FEEDFORWARD_MAX_PULSE_US     (1430.0f)
+#define BALL_FEEDFORWARD_POS_MID_POSITION_MM (25.0f)
+#define BALL_FEEDFORWARD_POS_MAX_POSITION_MM (50.0f)
+
+#define BALL_FEEDFORWARD_NEG_MAX_PULSE_US (1350.0f)
+#define BALL_FEEDFORWARD_NEG_MID_PULSE_US (1400.0f)
+#define BALL_FEEDFORWARD_ZERO_PULSE_US (1410.0f)
+#define BALL_FEEDFORWARD_POS_MID_PULSE_US (1430.0f)
+#define BALL_FEEDFORWARD_POS_MAX_PULSE_US (1485.0f)
 
 static float interpolate(
     float position_mm,
@@ -22,27 +27,45 @@ static float interpolate(
 
 float ball_position_feedforward_us(float position_mm)
 {
-    if (position_mm <= BALL_FEEDFORWARD_ZERO_POSITION_MM)
+    if (position_mm <= BALL_FEEDFORWARD_NEG_MAX_POSITION_MM)
     {
-        return BALL_FEEDFORWARD_ZERO_PULSE_US;
+        return BALL_FEEDFORWARD_NEG_MAX_PULSE_US;
     }
-    if (position_mm < BALL_FEEDFORWARD_MID_POSITION_MM)
+    if (position_mm < BALL_FEEDFORWARD_NEG_MID_POSITION_MM)
+    {
+        return interpolate(
+            position_mm,
+            BALL_FEEDFORWARD_NEG_MAX_POSITION_MM,
+            BALL_FEEDFORWARD_NEG_MID_POSITION_MM,
+            BALL_FEEDFORWARD_NEG_MAX_PULSE_US,
+            BALL_FEEDFORWARD_NEG_MID_PULSE_US);
+    }
+    if (position_mm < BALL_FEEDFORWARD_ZERO_POSITION_MM)
+    {
+        return interpolate(
+            position_mm,
+            BALL_FEEDFORWARD_NEG_MID_POSITION_MM,
+            BALL_FEEDFORWARD_ZERO_POSITION_MM,
+            BALL_FEEDFORWARD_NEG_MID_PULSE_US,
+            BALL_FEEDFORWARD_ZERO_PULSE_US);
+    }
+    if (position_mm < BALL_FEEDFORWARD_POS_MID_POSITION_MM)
     {
         return interpolate(
             position_mm,
             BALL_FEEDFORWARD_ZERO_POSITION_MM,
-            BALL_FEEDFORWARD_MID_POSITION_MM,
+            BALL_FEEDFORWARD_POS_MID_POSITION_MM,
             BALL_FEEDFORWARD_ZERO_PULSE_US,
-            BALL_FEEDFORWARD_MID_PULSE_US);
+            BALL_FEEDFORWARD_POS_MID_PULSE_US);
     }
-    if (position_mm < BALL_FEEDFORWARD_MAX_POSITION_MM)
+    if (position_mm < BALL_FEEDFORWARD_POS_MAX_POSITION_MM)
     {
         return interpolate(
             position_mm,
-            BALL_FEEDFORWARD_MID_POSITION_MM,
-            BALL_FEEDFORWARD_MAX_POSITION_MM,
-            BALL_FEEDFORWARD_MID_PULSE_US,
-            BALL_FEEDFORWARD_MAX_PULSE_US);
+            BALL_FEEDFORWARD_POS_MID_POSITION_MM,
+            BALL_FEEDFORWARD_POS_MAX_POSITION_MM,
+            BALL_FEEDFORWARD_POS_MID_PULSE_US,
+            BALL_FEEDFORWARD_POS_MAX_PULSE_US);
     }
-    return BALL_FEEDFORWARD_MAX_PULSE_US;
+    return BALL_FEEDFORWARD_POS_MAX_PULSE_US;
 }

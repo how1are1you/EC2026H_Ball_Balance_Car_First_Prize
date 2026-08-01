@@ -52,7 +52,7 @@ int main(void)
     assert(ball_balance_update_count == 1U);
     assert_close(ball_balance_proportional_us, -10.0f);
     assert_close(ball_balance_derivative_us, -20.0f);
-    assert(fake_servo_pulse_us == 1290U);
+    assert(fake_servo_pulse_us == 1400U);
 
     ball_state_observer.position_mm = 50.0f;
     ball_state_observer.velocity_mm_s = 0.0f;
@@ -60,9 +60,9 @@ int main(void)
     ball_balance_set_reference(-50.0f, 0.0f);
     ball_balance_update();
     assert(ball_balance_update_count == 2U);
-    assert_close(ball_balance_position_feedforward_us, 1430.0f);
+    assert_close(ball_balance_position_feedforward_us, 1485.0f);
     assert_close(ball_balance_derivative_us, 0.0f);
-    assert(fake_servo_pulse_us == 1430U);
+    assert(fake_servo_pulse_us == 1485U);
 
     ball_state_observer.valid = 0U;
     ball_balance_update();

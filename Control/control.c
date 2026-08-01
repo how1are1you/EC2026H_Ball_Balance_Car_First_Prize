@@ -457,9 +457,10 @@ void Key(void)
                 }
                 else
                 {
-                    StraightTurnTest_Start(
+                    StraightTurnTest_StartWithPostLap(
                         STRAIGHT_TURN_FAST_SPEED_MPS,
-                        STRAIGHT_TURN_FAST_ACCELERATION_MPS2);
+                        STRAIGHT_TURN_FAST_ACCELERATION_MPS2,
+                        STRAIGHT_TURN_ONE_LAP_POST_LAP_DISTANCE_M);
                 }
             }
             else

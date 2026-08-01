@@ -445,7 +445,11 @@ static const char *straight_turn_status_text(
 
 static void straight_turn_show_time(uint8_t y)
 {
-    uint32_t elapsed_ms = StraightTurnElapsedMs;
+    uint32_t elapsed_ms =
+        (Run_Mode == RUN_MODE_BALL_LAP &&
+         StraightTurnLapTimeMs != 0U) ?
+            StraightTurnLapTimeMs :
+            StraightTurnElapsedMs;
     uint32_t seconds = elapsed_ms / 1000U;
     uint32_t milliseconds = elapsed_ms % 1000U;
 
