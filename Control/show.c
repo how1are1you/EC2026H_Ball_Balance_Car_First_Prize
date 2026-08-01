@@ -445,13 +445,22 @@ static const char *straight_turn_status_text(
 
 static void straight_turn_show_time(uint8_t y)
 {
-    uint32_t elapsed_ms =
-        (Run_Mode == RUN_MODE_BALL_LAP &&
-         StraightTurnLapTimeMs != 0U) ?
-            StraightTurnLapTimeMs :
-            StraightTurnElapsedMs;
-    uint32_t seconds = elapsed_ms / 1000U;
-    uint32_t milliseconds = elapsed_ms % 1000U;
+    uint32_t elapsed_ms = StraightTurnElapsedMs;
+    uint32_t seconds;
+    uint32_t milliseconds;
+
+    if (Run_Mode == RUN_MODE_DRIBBLE &&
+        StraightTurnStraight1TimeMs != 0U)
+    {
+        elapsed_ms = StraightTurnStraight1TimeMs;
+    }
+    else if (Run_Mode == RUN_MODE_BALL_LAP &&
+             StraightTurnLapTimeMs != 0U)
+    {
+        elapsed_ms = StraightTurnLapTimeMs;
+    }
+    seconds = elapsed_ms / 1000U;
+    milliseconds = elapsed_ms % 1000U;
 
     if (seconds > 99U)
     {
@@ -475,13 +484,17 @@ static void straight_turn_show_time(uint8_t y)
 static void straight_turn_oled_show(void)
 {
     uint32_t target_speed_mm_s =
-        (Run_Mode == RUN_MODE_BALL_LAP) ?
+        (Run_Mode == RUN_MODE_BALL_LAP ||
+         Run_Mode == RUN_MODE_DRIBBLE) ?
             (uint32_t)(STRAIGHT_TURN_BALL_SPEED_MPS * 1000.0f + 0.5f) :
             (uint32_t)(STRAIGHT_TURN_FAST_SPEED_MPS * 1000.0f + 0.5f);
+    const char *title =
+        (Run_Mode == RUN_MODE_DRIBBLE) ? "DRIBBLE" :
+        (Run_Mode == RUN_MODE_BALL_LAP) ? "BALL LAP" :
+                                          "ONE LAP";
 
     memset(OLED_GRAM, 0, 128 * 8 * sizeof(u8));
-    oled_show_text(
-        0, 0, (Run_Mode == RUN_MODE_BALL_LAP) ? "BALL LAP" : "ONE LAP");
+    oled_show_text(0, 0, title);
     oled_show_text(
         72, 0, straight_turn_status_text(StraightTurnState));
 
@@ -957,7 +970,8 @@ void oled_show(void)
         return;
     }
     if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
-        Run_Mode == RUN_MODE_BALL_LAP)
+        Run_Mode == RUN_MODE_BALL_LAP ||
+        Run_Mode == RUN_MODE_DRIBBLE)
     {
         straight_turn_oled_show();
         return;
@@ -1041,6 +1055,7 @@ void APP_Show(void)
         Run_Mode == RUN_MODE_TURN_CAL ||
         Run_Mode == RUN_MODE_STRAIGHT_TURN ||
         Run_Mode == RUN_MODE_BALL_LAP ||
+        Run_Mode == RUN_MODE_DRIBBLE ||
         Run_Mode == RUN_MODE_BALL_HOLD_LAP ||
         Run_Mode == RUN_MODE_BALL_STATIC ||
         Run_Mode == RUN_MODE_SERVO_ADJUST)

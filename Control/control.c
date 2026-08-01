@@ -44,6 +44,7 @@ const menu_item_t Menu_Items[MENU_MODE_COUNT] =
 {
 	{RUN_MODE_STRAIGHT_TURN, "ONE LAP"},
 	{RUN_MODE_BALL_LAP, "BALL LAP"},
+	{RUN_MODE_DRIBBLE, "DRIBBLE"},
 	{RUN_MODE_BALL_HOLD_LAP, "BALL HOLD"},
 	{RUN_MODE_BALL_STATIC, "STATIC HYB"},
 	{RUN_MODE_SERVO_ADJUST, "SERVO ADJ"},
@@ -143,11 +144,13 @@ void TIMER_0_INST_IRQHandler(void)
 			{
 				ball_balance_set_enabled(
 					(Menu_Active == 0U) &&
-					(Run_Mode == RUN_MODE_BALL_LAP));
+					(Run_Mode == RUN_MODE_BALL_LAP ||
+					 Run_Mode == RUN_MODE_DRIBBLE));
 			}
 			ball_balance_set_vehicle_acceleration(
 				(Menu_Active == 0U &&
 				 (Run_Mode == RUN_MODE_BALL_LAP ||
+				  Run_Mode == RUN_MODE_DRIBBLE ||
 				  Run_Mode == RUN_MODE_BALL_HOLD_LAP) &&
 				 Flag_Stop == 0U) ?
 					StraightTurnStartupAccelerationMps2 : 0.0f);
@@ -165,6 +168,7 @@ void TIMER_0_INST_IRQHandler(void)
 					CONTROL_UART_OPEN_LOOP_TUNING);
 			}
 			else if (Run_Mode == RUN_MODE_BALL_LAP ||
+			         Run_Mode == RUN_MODE_DRIBBLE ||
 			         Run_Mode == RUN_MODE_BALL_HOLD_LAP)
 			{
 				control_uart_set_mode(CONTROL_UART_PID_TUNING);
@@ -198,6 +202,7 @@ void TIMER_0_INST_IRQHandler(void)
 				TurnCalibration_Run();
 			}else if(Run_Mode==RUN_MODE_STRAIGHT_TURN ||
 			         Run_Mode==RUN_MODE_BALL_LAP ||
+			         Run_Mode==RUN_MODE_DRIBBLE ||
 			         Run_Mode==RUN_MODE_BALL_HOLD_LAP){
 				StraightTurnTest_Run();
 			}
@@ -397,6 +402,7 @@ void Key(void)
 
         if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
             Run_Mode == RUN_MODE_BALL_LAP ||
+            Run_Mode == RUN_MODE_DRIBBLE ||
             Run_Mode == RUN_MODE_BALL_HOLD_LAP ||
             Run_Mode == RUN_MODE_IMU_DEBUG ||
             Run_Mode == RUN_MODE_BALL_STATIC ||
@@ -443,12 +449,14 @@ void Key(void)
             }
         }
         else if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
-                 Run_Mode == RUN_MODE_BALL_LAP)
+                 Run_Mode == RUN_MODE_BALL_LAP ||
+                 Run_Mode == RUN_MODE_DRIBBLE)
         {
             if (Flag_Stop)
             {
                 Reset_Velocity_PI();
-                if (Run_Mode == RUN_MODE_BALL_LAP)
+                if (Run_Mode == RUN_MODE_BALL_LAP ||
+                    Run_Mode == RUN_MODE_DRIBBLE)
                 {
                     StraightTurnTest_StartWithPostLap(
                         STRAIGHT_TURN_BALL_SPEED_MPS,
@@ -457,10 +465,9 @@ void Key(void)
                 }
                 else
                 {
-                    StraightTurnTest_StartWithPostLap(
+                    StraightTurnTest_Start(
                         STRAIGHT_TURN_FAST_SPEED_MPS,
-                        STRAIGHT_TURN_FAST_ACCELERATION_MPS2,
-                        STRAIGHT_TURN_ONE_LAP_POST_LAP_DISTANCE_M);
+                        STRAIGHT_TURN_FAST_ACCELERATION_MPS2);
                 }
             }
             else

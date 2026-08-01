@@ -39,6 +39,7 @@ volatile float StraightTurnHeadingErrorDeg;
 volatile float StraightTurnCommandSpeed;
 volatile float StraightTurnStartupAccelerationMps2;
 volatile uint32_t StraightTurnElapsedMs;
+volatile uint32_t StraightTurnStraight1TimeMs;
 volatile uint32_t StraightTurnLapTimeMs;
 volatile float StraightTurnPostLapDistanceM;
 
@@ -292,6 +293,11 @@ static void straight_turn_run_straight(void)
         STRAIGHT_TURN_ARC_LEAD_M;
     if (StraightTurnDistanceM >= turn_start_distance)
     {
+        if (first_straight != 0U)
+        {
+            StraightTurnStraight1TimeMs =
+                StraightTurnElapsedMs;
+        }
         straight_turn_start_arc(first_straight);
         return;
     }
@@ -465,6 +471,7 @@ void StraightTurnTest_Reset(void)
     StraightTurnCommandSpeed = 0.0f;
     StraightTurnStartupAccelerationMps2 = 0.0f;
     StraightTurnElapsedMs = 0U;
+    StraightTurnStraight1TimeMs = 0U;
     StraightTurnLapTimeMs = 0U;
     StraightTurnPostLapDistanceM = 0.0f;
     straight_turn_initial_yaw = 0.0f;
