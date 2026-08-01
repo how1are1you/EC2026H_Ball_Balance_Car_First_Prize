@@ -26,6 +26,10 @@
 #define BALL_BALANCE_DISTANCE_PROFILE_ACCEL_MM_S2 (70.0f)
 #define BALL_BALANCE_EFFECTIVE_DELAY_S (0.060f)
 #define BALL_BALANCE_DISTANCE_LIMIT_MIN_ERROR_MM (5.0f)
+#define BALL_BALANCE_GUARD_PREDICTION_S (0.060f)
+#define BALL_BALANCE_GUARD_SOFT_BOUNDARY_MM (5.0f)
+#define BALL_BALANCE_GUARD_GAIN_PER_S (8.0f)
+#define BALL_BALANCE_GUARD_VELOCITY_MAX_MM_S (60.0f)
 
 #define BALL_BALANCE_POSITION_KP_MIN (0.0f)
 #define BALL_BALANCE_POSITION_KP_MAX (20.0f)
@@ -59,6 +63,7 @@ extern volatile float ball_balance_measured_velocity_mm_s;
 extern volatile float ball_balance_estimated_acceleration_mm_s2;
 extern volatile float ball_balance_vehicle_acceleration_mps2;
 extern volatile float ball_balance_acceleration_feedforward_us;
+extern volatile float ball_balance_turn_feedforward_us;
 extern volatile float ball_balance_position_feedforward_us;
 extern volatile float ball_balance_proportional_us;
 extern volatile float ball_balance_derivative_us;
@@ -66,16 +71,22 @@ extern volatile float
     ball_balance_position_pid_velocity_mm_s;
 extern volatile float
     ball_balance_distance_velocity_limit_mm_s;
+extern volatile float ball_balance_predicted_error_mm;
+extern volatile float ball_balance_guard_velocity_mm_s;
 extern volatile float ball_balance_unsaturated_pulse_us;
 extern volatile uint32_t ball_balance_update_count;
 extern volatile uint16_t ball_balance_servo_pulse_us;
 extern volatile uint8_t ball_balance_distance_limited;
+extern volatile uint8_t ball_balance_guard_active;
+extern volatile uint8_t ball_balance_turn_feedforward_active;
 extern volatile uint8_t ball_balance_output_saturated;
 extern volatile ball_balance_status_t ball_balance_status;
 
 void ball_balance_init(void);
 void ball_balance_set_enabled(uint8_t enabled);
 void ball_balance_set_vehicle_acceleration(float acceleration_mps2);
+void ball_balance_set_predictive_guard_enabled(uint8_t enabled);
+void ball_balance_set_turn_feedforward(float correction_us);
 void ball_balance_set_reference(
     float position_mm,
     float velocity_mm_s);

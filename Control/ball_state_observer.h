@@ -6,6 +6,7 @@
 #define BALL_OBSERVER_DT_S                  (0.005f)
 #define BALL_OBSERVER_ALPHA                 (0.55f)
 #define BALL_OBSERVER_BETA                  (0.10f)
+#define BALL_OBSERVER_CAMERA_VELOCITY_BLEND (0.25f)
 #define BALL_OBSERVER_ACCEL_FILTER_ALPHA    (0.20f)
 #define BALL_OBSERVER_POSITION_LIMIT_MM     (150.0f)
 #define BALL_OBSERVER_VELOCITY_LIMIT_MM_S   (500.0f)
@@ -29,11 +30,13 @@ typedef struct
     volatile float position_mm;
     volatile float velocity_mm_s;
     volatile float acceleration_mm_s2;
+    volatile float camera_velocity_mm_s;
     volatile uint32_t last_frame_count;
     volatile uint32_t last_measurement_ms;
     volatile uint32_t update_count;
     volatile uint8_t initialized;
     volatile uint8_t valid;
+    volatile uint8_t velocity_blend_active;
     float previous_velocity_mm_s;
 } ball_state_observer_t;
 

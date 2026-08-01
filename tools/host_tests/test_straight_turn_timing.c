@@ -172,6 +172,11 @@ int main(void)
         STRAIGHT_TURN_BALL_ACCELERATION_MPS2,
         STRAIGHT_TURN_BALL_POST_LAP_DISTANCE_M);
 
+    fake_imu_sample.sample_count++;
+    StraightTurnTest_Run();
+    tick_count++;
+    assert(StraightTurnStartupMotionDetected == 1U);
+
     while (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1 &&
            tick_count < 1000U)
     {
@@ -184,6 +189,14 @@ int main(void)
     assert(StraightTurnState == STRAIGHT_TURN_ARC_1);
     assert(StraightTurnStraight1TimeMs != 0U);
     assert(StraightTurnStraight1TimeMs == StraightTurnElapsedMs);
+    assert(StraightTurnCommandOmegaRadS < -0.1f);
+    assert(fabsf(
+               StraightTurnCommandOmegaRadS +
+               StraightTurnCommandSpeed /
+                   TurnCalibrationRadiusM) < 0.001f);
+    assert(fabsf(
+               MotorA.Target_Encoder -
+               MotorB.Target_Encoder) < 0.001f);
 
     locked_time_ms = StraightTurnStraight1TimeMs;
     fake_imu_sample.sample_count++;
@@ -191,8 +204,12 @@ int main(void)
     assert(StraightTurnElapsedMs > locked_time_ms);
     assert(StraightTurnStraight1TimeMs == locked_time_ms);
 
+    StraightTurnTest_Stop();
+    assert(StraightTurnCommandOmegaRadS == 0.0f);
     StraightTurnTest_Reset();
     assert(StraightTurnStraight1TimeMs == 0U);
+    assert(StraightTurnStartupMotionDetected == 0U);
+    assert(StraightTurnCommandOmegaRadS == 0.0f);
 
     return 0;
 }

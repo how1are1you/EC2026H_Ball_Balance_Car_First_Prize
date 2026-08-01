@@ -4,6 +4,15 @@
 
 ball_state_observer_t ball_state_observer;
 
+static uint8_t finite_float(float value)
+{
+    return
+        (value == value &&
+         value <= 3.402823466e+38F &&
+         value >= -3.402823466e+38F)
+            ? 1U : 0U;
+}
+
 static float clamp_float(float value, float minimum, float maximum)
 {
     if (value < minimum)
@@ -21,7 +30,9 @@ static void invalidate_dynamic_state(ball_state_observer_t *observer)
 {
     observer->velocity_mm_s = 0.0f;
     observer->acceleration_mm_s2 = 0.0f;
+    observer->camera_velocity_mm_s = 0.0f;
     observer->previous_velocity_mm_s = 0.0f;
+    observer->velocity_blend_active = 0U;
     observer->initialized = 0U;
     observer->valid = 0U;
 }
@@ -36,11 +47,13 @@ void ball_state_observer_reset(ball_state_observer_t *observer)
     observer->position_mm = 0.0f;
     observer->velocity_mm_s = 0.0f;
     observer->acceleration_mm_s2 = 0.0f;
+    observer->camera_velocity_mm_s = 0.0f;
     observer->last_frame_count = 0U;
     observer->last_measurement_ms = 0U;
     observer->update_count = 0U;
     observer->initialized = 0U;
     observer->valid = 0U;
+    observer->velocity_blend_active = 0U;
     observer->previous_velocity_mm_s = 0.0f;
 }
 
@@ -54,12 +67,15 @@ void ball_state_observer_update(
     uint8_t new_frame;
     uint8_t initialized_this_tick = 0U;
     float residual_mm;
+    float residual_velocity_mm_s;
+    float camera_velocity_mm_s;
     float acceleration_raw_mm_s2;
 
     if (observer == NULL)
     {
         return;
     }
+    observer->velocity_blend_active = 0U;
     if (measurement == NULL)
     {
         invalidate_dynamic_state(observer);
@@ -92,10 +108,20 @@ void ball_state_observer_update(
                 measurement->position_mm,
                 -BALL_OBSERVER_POSITION_LIMIT_MM,
                 BALL_OBSERVER_POSITION_LIMIT_MM);
-            observer->velocity_mm_s = clamp_float(
-                measurement->velocity_mm_s,
-                -BALL_OBSERVER_VELOCITY_LIMIT_MM_S,
-                BALL_OBSERVER_VELOCITY_LIMIT_MM_S);
+            if (finite_float(measurement->velocity_mm_s) != 0U)
+            {
+                observer->velocity_mm_s = clamp_float(
+                    measurement->velocity_mm_s,
+                    -BALL_OBSERVER_VELOCITY_LIMIT_MM_S,
+                    BALL_OBSERVER_VELOCITY_LIMIT_MM_S);
+                observer->camera_velocity_mm_s =
+                    observer->velocity_mm_s;
+            }
+            else
+            {
+                observer->velocity_mm_s = 0.0f;
+                observer->camera_velocity_mm_s = 0.0f;
+            }
             observer->acceleration_mm_s2 = 0.0f;
             observer->previous_velocity_mm_s =
                 observer->velocity_mm_s;
@@ -125,12 +151,36 @@ void ball_state_observer_update(
                     BALL_OBSERVER_ALPHA * residual_mm,
                 -BALL_OBSERVER_POSITION_LIMIT_MM,
                 BALL_OBSERVER_POSITION_LIMIT_MM);
-            observer->velocity_mm_s = clamp_float(
+            residual_velocity_mm_s = clamp_float(
                 observer->velocity_mm_s +
                     BALL_OBSERVER_BETA * residual_mm *
                         1000.0f / (float)frame_dt_ms,
                 -BALL_OBSERVER_VELOCITY_LIMIT_MM_S,
                 BALL_OBSERVER_VELOCITY_LIMIT_MM_S);
+            if (finite_float(measurement->velocity_mm_s) != 0U)
+            {
+                camera_velocity_mm_s = clamp_float(
+                    measurement->velocity_mm_s,
+                    -BALL_OBSERVER_VELOCITY_LIMIT_MM_S,
+                    BALL_OBSERVER_VELOCITY_LIMIT_MM_S);
+                observer->camera_velocity_mm_s =
+                    camera_velocity_mm_s;
+                observer->velocity_mm_s = clamp_float(
+                    (1.0f -
+                     BALL_OBSERVER_CAMERA_VELOCITY_BLEND) *
+                            residual_velocity_mm_s +
+                        BALL_OBSERVER_CAMERA_VELOCITY_BLEND *
+                            camera_velocity_mm_s,
+                    -BALL_OBSERVER_VELOCITY_LIMIT_MM_S,
+                    BALL_OBSERVER_VELOCITY_LIMIT_MM_S);
+                observer->velocity_blend_active = 1U;
+            }
+            else
+            {
+                observer->camera_velocity_mm_s = 0.0f;
+                observer->velocity_mm_s =
+                    residual_velocity_mm_s;
+            }
         }
 
         observer->last_frame_count = measurement->frame_count;

@@ -24,6 +24,7 @@ All rights reserved
 #include "ball_hold_lap.h"
 #include "ball_state_observer.h"
 #include "ball_static_task.h"
+#include "ball_turn_feedforward.h"
 #include "servo.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
@@ -51,6 +52,8 @@ const menu_item_t Menu_Items[MENU_MODE_COUNT] =
 	{RUN_MODE_IMU_DEBUG, "IMU DEBUG"}
 };
 static u8 Reset_Left_PI, Reset_Right_PI;
+static ball_turn_feedforward_t ball_turn_feedforward_state;
+volatile uint8_t ball_turn_feedforward_entry_active;
 
 static void update_ball_state_observer(uint32_t now_ms)
 {
@@ -73,6 +76,40 @@ static void update_ball_state_observer(uint32_t now_ms)
         &ball_state_observer,
         &measurement,
         now_ms);
+}
+
+static void update_ball_turn_feedforward(void)
+{
+	uint8_t controller_context_active =
+		(Menu_Active == 0U &&
+		 Run_Mode == RUN_MODE_BALL_HOLD_LAP &&
+		 ball_hold_lap_controller_enabled() != 0U) ? 1U : 0U;
+	uint8_t arc_active =
+		(StraightTurnState == STRAIGHT_TURN_ARC_1 ||
+		 StraightTurnState == STRAIGHT_TURN_ARC_2) ? 1U : 0U;
+
+	if (controller_context_active != 0U)
+	{
+		if (ball_turn_feedforward_update(
+				&ball_turn_feedforward_state,
+				arc_active,
+				StraightTurnCommandSpeed,
+				StraightTurnCommandOmegaRadS) == 0U)
+		{
+			ball_turn_feedforward_reset(
+				&ball_turn_feedforward_state);
+		}
+	}
+	else
+	{
+		ball_turn_feedforward_reset(
+			&ball_turn_feedforward_state);
+	}
+
+	ball_turn_feedforward_entry_active =
+		ball_turn_feedforward_state.entry_active;
+	ball_balance_set_turn_feedforward(
+		ball_turn_feedforward_state.output_us);
 }
 
 static void menu_select_mode(uint8_t mode)
@@ -147,6 +184,12 @@ void TIMER_0_INST_IRQHandler(void)
 					(Run_Mode == RUN_MODE_BALL_LAP ||
 					 Run_Mode == RUN_MODE_DRIBBLE));
 			}
+			ball_balance_set_predictive_guard_enabled(
+				(Menu_Active == 0U &&
+				 Run_Mode == RUN_MODE_BALL_HOLD_LAP &&
+				 ball_hold_lap_controller_enabled() != 0U) ?
+					1U : 0U);
+			update_ball_turn_feedforward();
 			ball_balance_set_vehicle_acceleration(
 				(Menu_Active == 0U &&
 				 (Run_Mode == RUN_MODE_BALL_LAP ||

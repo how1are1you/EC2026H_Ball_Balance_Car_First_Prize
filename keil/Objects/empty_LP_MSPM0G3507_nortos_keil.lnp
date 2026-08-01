@@ -46,6 +46,8 @@
 ".\objects\ball_state_observer.o"
 ".\objects\ball_balance.o"
 ".\objects\ball_braking.o"
+".\objects\ball_predictive_guard.o"
+".\objects\ball_turn_feedforward.o"
 ".\objects\ball_position_feedforward.o"
 ".\objects\ball_position_capture.o"
 ".\objects\ball_hold_lap.o"

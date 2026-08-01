@@ -1,8 +1,10 @@
 #include "ball_balance.h"
 
 #include "ball_braking.h"
+#include "ball_predictive_guard.h"
 #include "ball_position_feedforward.h"
 #include "ball_state_observer.h"
+#include "ball_turn_feedforward.h"
 #include "servo.h"
 
 #define BALL_BALANCE_POSITION_DEADBAND_MM (1.0f)
@@ -28,18 +30,23 @@ volatile float ball_balance_measured_velocity_mm_s;
 volatile float ball_balance_estimated_acceleration_mm_s2;
 volatile float ball_balance_vehicle_acceleration_mps2;
 volatile float ball_balance_acceleration_feedforward_us;
+volatile float ball_balance_turn_feedforward_us;
 volatile float ball_balance_position_feedforward_us =
     SERVO_NEUTRAL_PULSE_US;
 volatile float ball_balance_proportional_us;
 volatile float ball_balance_derivative_us;
 volatile float ball_balance_position_pid_velocity_mm_s;
 volatile float ball_balance_distance_velocity_limit_mm_s;
+volatile float ball_balance_predicted_error_mm;
+volatile float ball_balance_guard_velocity_mm_s;
 volatile float ball_balance_unsaturated_pulse_us =
     SERVO_NEUTRAL_PULSE_US;
 volatile uint32_t ball_balance_update_count;
 volatile uint16_t ball_balance_servo_pulse_us =
     SERVO_NEUTRAL_PULSE_US;
 volatile uint8_t ball_balance_distance_limited;
+volatile uint8_t ball_balance_guard_active;
+volatile uint8_t ball_balance_turn_feedforward_active;
 volatile uint8_t ball_balance_output_saturated;
 volatile ball_balance_status_t ball_balance_status =
     BALL_BALANCE_DISABLED;
@@ -47,6 +54,16 @@ volatile ball_balance_status_t ball_balance_status =
 static uint8_t balance_enabled;
 static float position_integral_mm_s;
 static volatile uint8_t pid_reset_requested;
+static uint8_t predictive_guard_enabled;
+
+static uint8_t finite_float(float value)
+{
+    return
+        (value == value &&
+         value <= 3.402823466e+38F &&
+         value >= -3.402823466e+38F)
+            ? 1U : 0U;
+}
 
 static float clamp_float(float value, float minimum, float maximum)
 {
@@ -125,6 +142,11 @@ static void reset_controller_state(void)
     ball_balance_position_pid_velocity_mm_s = 0.0f;
     ball_balance_distance_velocity_limit_mm_s = 0.0f;
     ball_balance_distance_limited = 0U;
+    ball_balance_predicted_error_mm = 0.0f;
+    ball_balance_guard_velocity_mm_s = 0.0f;
+    ball_balance_guard_active = 0U;
+    ball_balance_turn_feedforward_us = 0.0f;
+    ball_balance_turn_feedforward_active = 0U;
 }
 
 static void set_control_pulse(
@@ -167,6 +189,7 @@ void ball_balance_init(void)
     ball_balance_velocity_limit_mm_s =
         BALL_BALANCE_TARGET_VELOCITY_MAX_MM_S;
     ball_balance_vehicle_acceleration_mps2 = 0.0f;
+    predictive_guard_enabled = 0U;
     ball_balance_update_count = 0U;
     pid_reset_requested = 0U;
     ball_balance_status = BALL_BALANCE_DISABLED;
@@ -190,6 +213,7 @@ void ball_balance_set_enabled(uint8_t enabled)
         ball_balance_target_mm = BALL_BALANCE_TARGET_MM;
         ball_balance_reference_velocity_mm_s = 0.0f;
         ball_balance_vehicle_acceleration_mps2 = 0.0f;
+        predictive_guard_enabled = 0U;
     }
     reset_controller_state();
     ball_balance_position_feedforward_us =
@@ -205,6 +229,32 @@ void ball_balance_set_vehicle_acceleration(float acceleration_mps2)
         acceleration_mps2,
         -BALL_BALANCE_VEHICLE_ACCELERATION_LIMIT_MPS2,
         BALL_BALANCE_VEHICLE_ACCELERATION_LIMIT_MPS2);
+}
+
+void ball_balance_set_predictive_guard_enabled(uint8_t enabled)
+{
+    predictive_guard_enabled = (enabled != 0U) ? 1U : 0U;
+    if (predictive_guard_enabled == 0U)
+    {
+        ball_balance_predicted_error_mm = 0.0f;
+        ball_balance_guard_velocity_mm_s = 0.0f;
+        ball_balance_guard_active = 0U;
+    }
+}
+
+void ball_balance_set_turn_feedforward(float correction_us)
+{
+    if (finite_float(correction_us) == 0U)
+    {
+        correction_us = 0.0f;
+    }
+    ball_balance_turn_feedforward_us = clamp_float(
+        correction_us,
+        -BALL_TURN_FF_LIMIT_US,
+        BALL_TURN_FF_LIMIT_US);
+    ball_balance_turn_feedforward_active =
+        (ball_balance_turn_feedforward_us < -0.001f ||
+         ball_balance_turn_feedforward_us > 0.001f) ? 1U : 0U;
 }
 
 void ball_balance_set_reference(
@@ -281,6 +331,7 @@ void ball_balance_update(void)
     float position_integral_candidate_mm_s;
     float distance_velocity_limit_mm_s;
     uint8_t integral_candidate_allowed;
+    ball_predictive_guard_result_t guard_result;
 
     ball_balance_update_count++;
 
@@ -355,6 +406,9 @@ void ball_balance_update(void)
         target_velocity_mm_s;
     ball_balance_distance_velocity_limit_mm_s = 0.0f;
     ball_balance_distance_limited = 0U;
+    ball_balance_predicted_error_mm = 0.0f;
+    ball_balance_guard_velocity_mm_s = 0.0f;
+    ball_balance_guard_active = 0U;
     if (reference_velocity_mm_s >
             -BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S &&
         reference_velocity_mm_s <
@@ -384,6 +438,39 @@ void ball_balance_update(void)
         }
     }
 
+    if (predictive_guard_enabled != 0U &&
+        reference_velocity_mm_s >
+            -BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S &&
+        reference_velocity_mm_s <
+            BALL_BALANCE_MOVING_REFERENCE_MIN_MM_S &&
+        ball_predictive_guard_calculate(
+            raw_position_error_mm,
+            velocity_mm_s,
+            BALL_BALANCE_GUARD_PREDICTION_S,
+            BALL_BALANCE_GUARD_SOFT_BOUNDARY_MM,
+            BALL_BALANCE_GUARD_GAIN_PER_S,
+            BALL_BALANCE_GUARD_VELOCITY_MAX_MM_S,
+            &guard_result) != 0U)
+    {
+        ball_balance_predicted_error_mm =
+            guard_result.predicted_error_mm;
+        ball_balance_guard_velocity_mm_s =
+            guard_result.guard_velocity_mm_s;
+        if (guard_result.active != 0U &&
+            ((guard_result.guard_velocity_mm_s > 0.0f &&
+              target_velocity_mm_s <
+                  guard_result.guard_velocity_mm_s) ||
+             (guard_result.guard_velocity_mm_s < 0.0f &&
+              target_velocity_mm_s >
+                  guard_result.guard_velocity_mm_s)))
+        {
+            target_velocity_mm_s =
+                guard_result.guard_velocity_mm_s;
+            ball_balance_guard_active = 1U;
+            integral_candidate_allowed = 0U;
+        }
+    }
+
     velocity_error_mm_s =
         target_velocity_mm_s - velocity_mm_s;
     if (velocity_error_mm_s >
@@ -407,7 +494,8 @@ void ball_balance_update(void)
     correction_unsaturated_us =
         ball_balance_proportional_us +
         ball_balance_derivative_us +
-        acceleration_feedforward_us;
+        acceleration_feedforward_us +
+        ball_balance_turn_feedforward_us;
     correction_us = correction_unsaturated_us;
 
     ball_balance_target_velocity_mm_s = target_velocity_mm_s;
@@ -421,6 +509,10 @@ void ball_balance_update(void)
     set_control_pulse(
         ball_balance_position_feedforward_us,
         correction_us);
+    if (ball_balance_turn_feedforward_active != 0U)
+    {
+        integral_candidate_allowed = 0U;
+    }
     if (integral_candidate_allowed != 0U &&
         (ball_balance_output_saturated == 0U ||
          (ball_balance_unsaturated_pulse_us >

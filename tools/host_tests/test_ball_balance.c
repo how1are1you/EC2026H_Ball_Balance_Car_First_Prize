@@ -74,70 +74,73 @@ int main(void)
 
     assert(ball_balance_set_cascade_gains(
                2.0f, 0.0f, 1.0f, 0.0f, 500.0f) == 1U);
-    ball_state_observer.position_mm = 20.0f;
+    ball_state_observer.position_mm = 0.0f;
     ball_state_observer.velocity_mm_s = 60.0f;
     ball_state_observer.acceleration_mm_s2 = 0.0f;
     ball_balance_set_reference(50.0f, 0.0f);
     ball_balance_update();
     assert(ball_balance_update_count == 2U);
+    assert_close(ball_balance_position_pid_velocity_mm_s, 100.0f);
+    assert_close(
+        ball_balance_distance_velocity_limit_mm_s,
+        79.57136f);
+    assert_close(ball_balance_target_velocity_mm_s, 79.57136f);
+    assert(ball_balance_distance_limited == 1U);
+    assert_close(ball_balance_proportional_us, 19.57136f);
+    assert_close(ball_balance_unsaturated_pulse_us, 1394.5714f);
+    assert(fake_servo_pulse_us == 1395U);
+
+    ball_state_observer.position_mm = 20.0f;
+    ball_state_observer.velocity_mm_s = 60.0f;
+    ball_balance_update();
+    assert(ball_balance_update_count == 3U);
     assert_close(ball_balance_position_pid_velocity_mm_s, 60.0f);
     assert_close(
         ball_balance_distance_velocity_limit_mm_s,
-        40.66457f);
-    assert_close(ball_balance_target_velocity_mm_s, 40.66457f);
-    assert(ball_balance_distance_limited == 1U);
-    assert_close(ball_balance_proportional_us, -19.33543f);
-    assert_close(ball_balance_unsaturated_pulse_us, 1383.6646f);
-    assert(fake_servo_pulse_us == 1385U);
+        60.74336f);
+    assert_close(ball_balance_target_velocity_mm_s, 60.0f);
+    assert(ball_balance_distance_limited == 0U);
+    assert_close(ball_balance_proportional_us, 0.0f);
+    assert_close(ball_balance_unsaturated_pulse_us, 1403.0f);
+    assert(fake_servo_pulse_us == 1405U);
 
     ball_state_observer.position_mm = 30.0f;
     ball_state_observer.velocity_mm_s = 80.0f;
     ball_balance_update();
-    assert(ball_balance_update_count == 3U);
+    assert(ball_balance_update_count == 4U);
     assert_close(ball_balance_position_pid_velocity_mm_s, 40.0f);
     assert_close(
         ball_balance_distance_velocity_limit_mm_s,
-        32.88775f);
-    assert_close(ball_balance_target_velocity_mm_s, 32.88775f);
-    assert(ball_balance_distance_limited == 1U);
-    assert_close(ball_balance_proportional_us, -47.11225f);
-    assert_close(ball_balance_unsaturated_pulse_us, 1371.8877f);
-    assert(fake_servo_pulse_us == 1370U);
+        48.88145f);
+    assert_close(ball_balance_target_velocity_mm_s, 40.0f);
+    assert(ball_balance_distance_limited == 0U);
+    assert_close(ball_balance_proportional_us, -40.0f);
+    assert_close(ball_balance_unsaturated_pulse_us, 1379.0f);
+    assert(fake_servo_pulse_us == 1380U);
 
     ball_state_observer.position_mm = 35.0f;
     ball_state_observer.velocity_mm_s = 20.0f;
     ball_balance_update();
-    assert(ball_balance_update_count == 4U);
+    assert(ball_balance_update_count == 5U);
     assert_close(ball_balance_position_pid_velocity_mm_s, 30.0f);
     assert_close(
         ball_balance_distance_velocity_limit_mm_s,
-        28.25395f);
-    assert_close(ball_balance_target_velocity_mm_s, 28.25395f);
-    assert(ball_balance_distance_limited == 1U);
-    assert_close(ball_balance_proportional_us, 8.25395f);
-    assert_close(ball_balance_unsaturated_pulse_us, 1436.254f);
-    assert(fake_servo_pulse_us == 1435U);
+        41.81782f);
+    assert_close(ball_balance_target_velocity_mm_s, 30.0f);
+    assert(ball_balance_distance_limited == 0U);
+    assert_close(ball_balance_proportional_us, 10.0f);
+    assert_close(ball_balance_unsaturated_pulse_us, 1438.0f);
+    assert(fake_servo_pulse_us == 1440U);
 
     ball_state_observer.position_mm = 40.0f;
     ball_state_observer.velocity_mm_s = 5.0f;
     ball_balance_update();
-    assert(ball_balance_update_count == 5U);
+    assert(ball_balance_update_count == 6U);
     assert_close(ball_balance_position_pid_velocity_mm_s, 20.0f);
     assert_close(
         ball_balance_distance_velocity_limit_mm_s,
-        22.76094f);
+        33.45156f);
     assert_close(ball_balance_target_velocity_mm_s, 20.0f);
-    assert(ball_balance_distance_limited == 0U);
-
-    ball_state_observer.position_mm = 46.0f;
-    ball_state_observer.velocity_mm_s = 5.0f;
-    ball_balance_update();
-    assert(ball_balance_update_count == 6U);
-    assert_close(ball_balance_position_pid_velocity_mm_s, 8.0f);
-    assert_close(
-        ball_balance_distance_velocity_limit_mm_s,
-        13.79615f);
-    assert_close(ball_balance_target_velocity_mm_s, 8.0f);
     assert(ball_balance_distance_limited == 0U);
 
     ball_state_observer.position_mm = 30.0f;
@@ -150,21 +153,21 @@ int main(void)
     assert_close(ball_balance_target_velocity_mm_s, 50.0f);
     assert(ball_balance_distance_limited == 0U);
 
-    ball_state_observer.position_mm = -30.0f;
-    ball_state_observer.velocity_mm_s = -80.0f;
+    ball_state_observer.position_mm = 0.0f;
+    ball_state_observer.velocity_mm_s = -60.0f;
     ball_balance_set_reference(-50.0f, 0.0f);
     ball_balance_update();
     assert(ball_balance_update_count == 8U);
-    assert_close(ball_balance_position_pid_velocity_mm_s, -40.0f);
+    assert_close(ball_balance_position_pid_velocity_mm_s, -100.0f);
     assert_close(
         ball_balance_distance_velocity_limit_mm_s,
-        32.88775f);
-    assert_close(ball_balance_target_velocity_mm_s, -32.88775f);
+        79.57136f);
+    assert_close(ball_balance_target_velocity_mm_s, -79.57136f);
     assert(ball_balance_distance_limited == 1U);
 
     assert(ball_balance_set_cascade_gains(
                2.0f, 1.0f, 1.0f, 0.0f, 500.0f) == 1U);
-    ball_state_observer.position_mm = 20.0f;
+    ball_state_observer.position_mm = 0.0f;
     ball_state_observer.velocity_mm_s = 40.0f;
     ball_balance_set_reference(50.0f, 0.0f);
     for (tick_ms = 0U; tick_ms < 100U; tick_ms++)
@@ -173,7 +176,7 @@ int main(void)
         assert(ball_balance_distance_limited == 1U);
         assert_close(
             ball_balance_target_velocity_mm_s,
-            40.66457f);
+            79.57136f);
     }
 
     ball_state_observer.position_mm = 46.0f;
@@ -225,5 +228,161 @@ int main(void)
     assert(ball_balance_distance_limited == 0U);
     assert(ball_balance_output_saturated == 0U);
     assert(fake_servo_pulse_us == SERVO_NEUTRAL_PULSE_US);
+
+    ball_state_observer.valid = 1U;
+    ball_state_observer.initialized = 1U;
+    ball_state_observer.acceleration_mm_s2 = 0.0f;
+    assert(ball_balance_set_cascade_gains(
+               2.0f, 0.0f, 1.0f, 0.0f, 500.0f) == 1U);
+    ball_balance_set_reference(0.0f, 0.0f);
+    ball_balance_set_predictive_guard_enabled(1U);
+
+    ball_state_observer.position_mm = 6.0f;
+    ball_state_observer.velocity_mm_s = 50.0f;
+    ball_balance_update();
+    assert_close(ball_balance_predicted_error_mm, -9.0f);
+    assert_close(ball_balance_guard_velocity_mm_s, -32.0f);
+    assert_close(ball_balance_position_pid_velocity_mm_s, -12.0f);
+    assert_close(ball_balance_target_velocity_mm_s, -32.0f);
+    assert(ball_balance_guard_active == 1U);
+
+    ball_state_observer.position_mm = 6.0f;
+    ball_state_observer.velocity_mm_s = -50.0f;
+    ball_balance_update();
+    assert_close(ball_balance_predicted_error_mm, -3.0f);
+    assert_close(ball_balance_guard_velocity_mm_s, 0.0f);
+    assert_close(ball_balance_target_velocity_mm_s, -12.0f);
+    assert(ball_balance_guard_active == 0U);
+
+    ball_state_observer.position_mm = 9.0f;
+    ball_state_observer.velocity_mm_s = -50.0f;
+    ball_balance_update();
+    assert_close(ball_balance_predicted_error_mm, -6.0f);
+    assert_close(ball_balance_guard_velocity_mm_s, -8.0f);
+    assert_close(ball_balance_target_velocity_mm_s, -18.0f);
+    assert(ball_balance_guard_active == 0U);
+
+    ball_state_observer.position_mm = -6.0f;
+    ball_state_observer.velocity_mm_s = -50.0f;
+    ball_balance_update();
+    assert_close(ball_balance_predicted_error_mm, 9.0f);
+    assert_close(ball_balance_guard_velocity_mm_s, 32.0f);
+    assert_close(ball_balance_target_velocity_mm_s, 32.0f);
+    assert(ball_balance_guard_active == 1U);
+
+    ball_balance_set_predictive_guard_enabled(0U);
+    ball_state_observer.position_mm = 6.0f;
+    ball_state_observer.velocity_mm_s = 50.0f;
+    ball_balance_update();
+    assert_close(ball_balance_predicted_error_mm, 0.0f);
+    assert_close(ball_balance_guard_velocity_mm_s, 0.0f);
+    assert_close(ball_balance_target_velocity_mm_s, -12.0f);
+    assert(ball_balance_guard_active == 0U);
+
+    assert(ball_balance_set_cascade_gains(
+               2.0f, 1.0f, 1.0f, 0.0f, 500.0f) == 1U);
+    ball_balance_set_predictive_guard_enabled(1U);
+    ball_state_observer.position_mm = 6.0f;
+    ball_state_observer.velocity_mm_s = 50.0f;
+    for (tick_ms = 0U; tick_ms < 100U; tick_ms++)
+    {
+        ball_balance_update();
+        assert_close(ball_balance_target_velocity_mm_s, -32.0f);
+        assert(ball_balance_guard_active == 1U);
+    }
+
+    ball_balance_set_predictive_guard_enabled(0U);
+    ball_state_observer.position_mm = 4.0f;
+    ball_state_observer.velocity_mm_s = 0.0f;
+    ball_balance_update();
+    assert_close(ball_balance_target_velocity_mm_s, -8.02f);
+    assert(ball_balance_guard_active == 0U);
+
+    ball_balance_set_predictive_guard_enabled(1U);
+    ball_state_observer.position_mm = 6.0f;
+    ball_state_observer.velocity_mm_s = 50.0f;
+    ball_balance_update();
+    assert(ball_balance_guard_active == 1U);
+    ball_state_observer.valid = 0U;
+    ball_balance_update();
+    assert_close(ball_balance_predicted_error_mm, 0.0f);
+    assert_close(ball_balance_guard_velocity_mm_s, 0.0f);
+    assert(ball_balance_guard_active == 0U);
+
+    ball_state_observer.valid = 1U;
+    ball_state_observer.initialized = 1U;
+    ball_state_observer.position_mm = 0.0f;
+    ball_state_observer.velocity_mm_s = 0.0f;
+    ball_state_observer.acceleration_mm_s2 = 0.0f;
+    assert(ball_balance_set_cascade_gains(
+               0.0f, 0.0f, 1.0f, 0.0f, 500.0f) == 1U);
+    ball_balance_set_predictive_guard_enabled(0U);
+    ball_balance_set_reference(0.0f, 0.0f);
+    ball_balance_set_turn_feedforward(0.0f);
+    ball_balance_update();
+
+    ball_balance_set_turn_feedforward(-50.0f);
+    ball_balance_update();
+    assert_close(ball_balance_turn_feedforward_us, -50.0f);
+    assert(ball_balance_turn_feedforward_active == 1U);
+    assert_close(
+        ball_balance_unsaturated_pulse_us,
+        ball_balance_position_feedforward_us - 50.0f);
+
+    ball_balance_set_turn_feedforward(-200.0f);
+    assert_close(ball_balance_turn_feedforward_us, -100.0f);
+    ball_balance_set_turn_feedforward(NAN);
+    assert_close(ball_balance_turn_feedforward_us, 0.0f);
+    assert(ball_balance_turn_feedforward_active == 0U);
+
+    assert(ball_balance_set_cascade_gains(
+               2.0f, 1.0f, 1.0f, 0.0f, 500.0f) == 1U);
+    ball_balance_set_turn_feedforward(0.0f);
+    ball_state_observer.position_mm = 0.0f;
+    ball_state_observer.velocity_mm_s = 0.0f;
+    ball_balance_update();
+
+    ball_balance_set_turn_feedforward(-30.0f);
+    ball_state_observer.position_mm = 6.0f;
+    for (tick_ms = 0U; tick_ms < 100U; tick_ms++)
+    {
+        ball_balance_update();
+        assert(ball_balance_turn_feedforward_active == 1U);
+    }
+
+    ball_balance_set_turn_feedforward(0.0f);
+    ball_state_observer.position_mm = 4.0f;
+    ball_state_observer.velocity_mm_s = 0.0f;
+    ball_balance_update();
+    assert_close(ball_balance_target_velocity_mm_s, -8.02f);
+    assert(ball_balance_turn_feedforward_active == 0U);
+
+    assert(ball_balance_set_cascade_gains(
+               2.0f, 0.0f, 1.0f, 0.0f, 500.0f) == 1U);
+    ball_balance_set_turn_feedforward(0.0f);
+    ball_state_observer.position_mm = 0.0f;
+    ball_state_observer.velocity_mm_s = 0.0f;
+    ball_balance_update();
+
+    ball_balance_set_predictive_guard_enabled(1U);
+    ball_balance_set_turn_feedforward(-30.0f);
+    ball_state_observer.position_mm = 6.0f;
+    ball_state_observer.velocity_mm_s = 50.0f;
+    ball_balance_update();
+    assert(ball_balance_guard_active == 1U);
+    assert_close(ball_balance_target_velocity_mm_s, -32.0f);
+    assert_close(ball_balance_turn_feedforward_us, -30.0f);
+    assert_close(
+        ball_balance_unsaturated_pulse_us,
+        ball_balance_position_feedforward_us +
+            ball_balance_proportional_us +
+            ball_balance_derivative_us +
+            ball_balance_acceleration_feedforward_us -
+            30.0f);
+
+    ball_balance_set_enabled(0U);
+    assert_close(ball_balance_turn_feedforward_us, 0.0f);
+    assert(ball_balance_turn_feedforward_active == 0U);
+
     return 0;
 }

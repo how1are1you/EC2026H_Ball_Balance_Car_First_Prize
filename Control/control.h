@@ -82,6 +82,7 @@ extern int Run_Mode;//小车运行模式
 extern volatile uint8_t Menu_Active;
 extern volatile uint8_t Menu_Selection;
 extern volatile uint8_t Menu_SelectionIndex;
+extern volatile uint8_t ball_turn_feedforward_entry_active;
 extern const menu_item_t Menu_Items[MENU_MODE_COUNT];
 void TIM6_Init(void); 
 void Get_Velocity_From_Encoder(int Encoder1,int Encoder2);

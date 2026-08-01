@@ -650,6 +650,16 @@
               <FilePath>..\Control\ball_braking.c</FilePath>
             </File>
             <File>
+              <FileName>ball_predictive_guard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_predictive_guard.c</FilePath>
+            </File>
+            <File>
+              <FileName>ball_turn_feedforward.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Control\ball_turn_feedforward.c</FilePath>
+            </File>
+            <File>
               <FileName>ball_position_feedforward.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Control\ball_position_feedforward.c</FilePath>
