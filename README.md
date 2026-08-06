@@ -1,41 +1,79 @@
-## Example Summary
+# 2026全国大学生电子设计竞赛
+## 钢球平衡控制小车
 
-Empty project using DriverLib.
-This example shows a basic empty project using DriverLib with just main file
-and SysConfig initialization.
+获得：
 
-## Peripherals & Pin Assignments
+- 全国大学生电子设计竞赛一等奖
 
-| Peripheral | Pin | Function |
-| --- | --- | --- |
-| SYSCTL |  |  |
-| DEBUGSS | PA20 | Debug Clock |
-| DEBUGSS | PA19 | Debug Data In Out |
+## 项目简介
 
-## BoosterPacks, Board Resources & Jumper Settings
+这是一个面向全国大学生电子设计竞赛 H 题的车载平衡滚球运动控制系统。
 
-Visit [LP_MSPM0G3507](https://www.ti.com/tool/LP-MSPM0G3507) for LaunchPad information, including user guide and hardware files.
+小车沿黑色环形轨迹自主行驶，车载摆杆中放置钢球，通过摄像头实时获取钢球位置，再由舵机调节摆杆角度，使钢球在静止或行驶过程中保持在目标位置附近。
 
-| Pin | Peripheral | Function | LaunchPad Pin | LaunchPad Settings |
-| --- | --- | --- | --- | --- |
-| PA20 | DEBUGSS | SWCLK | N/A | <ul><li>PA20 is used by SWD during debugging<br><ul><li>`J101 15:16 ON` Connect to XDS-110 SWCLK while debugging<br><li>`J101 15:16 OFF` Disconnect from XDS-110 SWCLK if using pin in application</ul></ul> |
-| PA19 | DEBUGSS | SWDIO | N/A | <ul><li>PA19 is used by SWD during debugging<br><ul><li>`J101 13:14 ON` Connect to XDS-110 SWDIO while debugging<br><li>`J101 13:14 OFF` Disconnect from XDS-110 SWDIO if using pin in application</ul></ul> |
+项目以 TI MSPM0G3507 为主控制器，结合红外循迹、电机编码器、IMU、视觉位置检测和 OLED 显示，实现小车运动控制与钢球平衡控制的协同运行。
 
-### Device Migration Recommendations
-This project was developed for a superset device included in the LP_MSPM0G3507 LaunchPad. Please
-visit the [CCS User's Guide](https://software-dl.ti.com/msp430/esd/MSPM0-SDK/latest/docs/english/tools/ccs_ide_guide/doc_guide/doc_guide-srcs/ccs_ide_guide.html#sysconfig-project-migration)
-for information about migrating to other MSPM0 devices.
+## 项目成果
 
-### Low-Power Recommendations
-TI recommends to terminate unused pins by setting the corresponding functions to
-GPIO and configure the pins to output low or input with internal
-pullup/pulldown resistor.
+- 完成小车黑线循迹和环形路线自主行驶。
+- 支持静止状态下钢球往返运动、定点保持和误差观察。
+- 支持小车行驶过程中钢球中心位置保持。
+- 支持钢球指定位置保持，可用于不同位置下的平衡控制演示。
+- 通过摄像头视觉数据获取钢球位置和运动信息。
+- 使用编码器和 IMU 获取车辆运动状态，辅助提升行驶稳定性。
+- 通过 OLED 显示运行状态、菜单和调试信息。
+- 提供串口调参和主机侧控制算法测试代码，方便验证平衡控制逻辑。
 
-SysConfig allows developers to easily configure unused pins by selecting **Board**→**Configure Unused Pins**.
+## 演示场景
 
-For more information about jumper configuration to achieve low-power using the
-MSPM0 LaunchPad, please visit the [LP-MSPM0G3507 User's Guide](https://www.ti.com/lit/slau873).
+### 静止平衡控制
 
-## Example Usage
+小车保持静止，控制钢球从摆杆中心移动到正向指定位置，再返回到负向指定位置并保持，用于展示钢球位置控制和稳定控制能力。
 
-Compile, load and run the example.
+### 行驶中保持钢球位置
+
+小车从起点出发沿黑线行驶，在直线和弯道过程中持续调节摆杆，使钢球尽量保持在目标位置附近。
+
+### 环形路线运行
+
+小车完成从起点出发、沿环形路线行驶并返回起点的演示流程，同时持续进行钢球平衡控制。
+
+## 技术概览
+
+| 类别 | 内容 |
+| --- | --- |
+| 主控芯片 | TI MSPM0G3507 |
+| 开发语言 | C |
+| 开发环境 | Keil MDK、TI SysConfig、DriverLib |
+| 车辆控制 | 红外循迹、电机 PWM、编码器速度闭环 |
+| 平衡控制 | 摄像头视觉检测、位置观测、级联控制、舵机摆杆调节 |
+| 状态感知 | IMU、编码器、视觉位置数据 |
+| 人机交互 | OLED、按键、串口调参 |
+
+## 源码结构
+
+| 路径 | 说明 |
+| --- | --- |
+| `Control/` | 小车运动控制、滚球平衡控制、视觉通信和运行模式管理 |
+| `Hardware/` | 电机、编码器、舵机、OLED、IMU、ADC、按键和循迹等硬件驱动 |
+| `tools/host_tests/` | 平衡控制、状态观测、视觉协议等模块的主机侧测试代码 |
+| `ti/` | TI DriverLib 相关源码 |
+| `source/` | TI SDK 和第三方依赖材料 |
+| `keil/` | Keil 工程、启动文件、链接脚本和构建配置 |
+| `empty.c` | 程序入口和系统初始化流程 |
+
+## 开发与构建
+
+使用 Keil uVision 打开：
+
+```text
+keil/empty_LP_MSPM0G3507_nortos_keil.uvprojx
+```
+
+选择目标 `MSPM0G3507_Project` 后执行 **Build Target** 即可构建工程。构建产物默认位于 `keil/Objects/` 目录。
+
+如果修改了 `empty.syscfg`，需要使用 TI SysConfig 重新生成 `ti_msp_dl_config.c` 和 `ti_msp_dl_config.h`，不要直接手动修改生成文件。
+
+## 项目说明
+
+本仓库公开的是竞赛作品源码，部分参数与控制效果依赖具体车体结构、传感器安装方式、赛道和现场调试结果。代码和目录结构可作为 MSPM0G3507 裸机控制、循迹小车以及钢球平衡控制项目的学习参考。
