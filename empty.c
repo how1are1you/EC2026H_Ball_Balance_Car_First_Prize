@@ -32,6 +32,7 @@
 #include "board.h"
 #include "ball_balance.h"
 #include "ball_hold_lap.h"
+#include "ball_state_observer.h"
 #include "ball_static_task.h"
 #include "imu/imu.h"
 #include "servo.h"
@@ -77,6 +78,7 @@ int main(void)
     // 系统初始化
     SYSCFG_DL_init(); // 初始化系统配置
     vision_uart_reset();
+    ball_state_observer_reset(&ball_state_observer);
     control_uart_reset();
     servo_init();
     ball_balance_init();

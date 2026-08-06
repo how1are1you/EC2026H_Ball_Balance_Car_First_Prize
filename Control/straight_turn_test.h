@@ -28,6 +28,7 @@ typedef enum
 #define STRAIGHT_TURN_BALL_SPEED_MPS (0.25f)
 #define STRAIGHT_TURN_FAST_ACCELERATION_MPS2 (0.30f)
 #define STRAIGHT_TURN_BALL_ACCELERATION_MPS2 (0.09f)
+#define STRAIGHT_TURN_BALL_POST_LAP_DISTANCE_M (1.00f)
 
 extern volatile StraightTurnState_t StraightTurnState;
 extern volatile uint8_t StraightTurnFault;
@@ -36,8 +37,11 @@ extern volatile float StraightTurnYawDeg;
 extern volatile float StraightTurnLineError;
 extern volatile float StraightTurnHeadingErrorDeg;
 extern volatile float StraightTurnCommandSpeed;
+extern volatile float StraightTurnCommandOmegaRadS;
 extern volatile float StraightTurnStartupAccelerationMps2;
+extern volatile uint8_t StraightTurnStartupMotionDetected;
 extern volatile uint32_t StraightTurnElapsedMs;
+extern volatile uint32_t StraightTurnStraight1TimeMs;
 extern volatile uint32_t StraightTurnLapTimeMs;
 extern volatile float StraightTurnPostLapDistanceM;
 

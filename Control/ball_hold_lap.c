@@ -2,11 +2,9 @@
 
 #include "ball_balance.h"
 #include "ball_position_capture.h"
+#include "ball_state_observer.h"
 #include "control.h"
 #include "straight_turn_test.h"
-#include "uart_callback.h"
-
-extern volatile unsigned long tick_ms;
 
 volatile ball_hold_lap_state_t ball_hold_lap_state =
     BALL_HOLD_LAP_READY;
@@ -27,33 +25,19 @@ volatile uint8_t ball_hold_lap_fault;
 static ball_position_capture_t ball_hold_capture;
 static uint32_t ball_hold_last_measurement_frame;
 
-static uint8_t ball_hold_lap_read_vision(
+static uint8_t ball_hold_lap_read_state(
     float *position_mm,
     uint32_t *frame_count,
     uint32_t *sample_ms)
 {
-    uint32_t frame_before;
-    uint32_t frame_after;
-
-    if (vision_ball_position_valid == 0U)
-    {
-        return 0U;
-    }
-    if ((uint32_t)tick_ms - vision_ball_last_update_ms >
-        BALL_HOLD_LAP_VISION_TIMEOUT_MS)
+    if (ball_state_observer.valid == 0U)
     {
         return 0U;
     }
 
-    do
-    {
-        frame_before = vision_ball_frame_count;
-        *position_mm = vision_ball_position_mm;
-        *sample_ms = vision_ball_last_update_ms;
-        frame_after = vision_ball_frame_count;
-    } while (frame_before != frame_after);
-
-    *frame_count = frame_after;
+    *position_mm = ball_state_observer.position_mm;
+    *frame_count = ball_state_observer.last_frame_count;
+    *sample_ms = ball_state_observer.last_measurement_ms;
     return 1U;
 }
 
@@ -133,7 +117,7 @@ static void ball_hold_lap_update_capture(void)
     uint32_t sample_ms;
     ball_position_capture_result_t result;
 
-    if (ball_hold_lap_read_vision(
+    if (ball_hold_lap_read_state(
             &position_mm,
             &frame_count,
             &sample_ms) == 0U)
@@ -185,7 +169,7 @@ static void ball_hold_lap_update_measurement(void)
     uint32_t frame_count;
     uint32_t sample_ms;
 
-    if (ball_hold_lap_read_vision(
+    if (ball_hold_lap_read_state(
             &position_mm,
             &frame_count,
             &sample_ms) == 0U)
@@ -197,10 +181,6 @@ static void ball_hold_lap_update_measurement(void)
 
     ball_hold_lap_current_valid = 1U;
     ball_hold_lap_current_mm = position_mm;
-    if (frame_count == ball_hold_last_measurement_frame)
-    {
-        return;
-    }
     ball_hold_last_measurement_frame = frame_count;
 
     error_mm = position_mm - ball_hold_lap_target_mm;

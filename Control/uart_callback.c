@@ -4,22 +4,16 @@
 #include "ball_static_task.h"
 #include "servo.h"
 #include "ti_msp_dl_config.h"
+#include "vision_protocol.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #define VISION_FRAME_HEADER             (0xA5U)
 #define VISION_FLOAT32_SIZE             (4U)
-#define VISION_FRAME_PAYLOAD_SIZE       (8U)
-#define VISION_POSITION_OFFSET          (0U)
-#define VISION_VELOCITY_OFFSET          (4U)
+#define VISION_FRAME_PAYLOAD_SIZE       VISION_PROTOCOL_PAYLOAD_SIZE
 #define VISION_FRAME_TIMEOUT_MS         (10UL)
-#define FLOAT32_EXPONENT_MASK           (0x7F800000UL)
 #define SERVO_UART_LINE_SIZE            (16U)
-#define VISION_POSITION_FILTER_ALPHA    (0.55f)
-#define VISION_VELOCITY_FILTER_ALPHA    (0.45f)
-#define VISION_FILTER_MIN_DT_MS         (5UL)
-#define VISION_FILTER_MAX_DT_MS         (200UL)
 
 extern volatile unsigned long tick_ms;
 
@@ -38,10 +32,6 @@ volatile uint32_t control_uart_error_count;
 static volatile uint8_t vision_payload_index;
 static uint8_t vision_payload[VISION_FRAME_PAYLOAD_SIZE];
 static volatile uint32_t vision_last_byte_ms;
-static uint8_t vision_filter_initialized;
-static float vision_filtered_position_mm;
-static float vision_filtered_velocity_mm_s;
-static uint32_t vision_previous_sample_ms;
 static volatile control_uart_mode_t control_uart_mode;
 static volatile uint8_t servo_uart_rx_length;
 static volatile uint8_t servo_uart_command_ready;
@@ -53,82 +43,24 @@ static void vision_uart_reset_parser(void)
     vision_payload_index = 0U;
 }
 
-static uint32_t vision_uart_read_u32_le(uint8_t offset)
-{
-    return
-        ((uint32_t)vision_payload[offset]) |
-        ((uint32_t)vision_payload[offset + 1U] << 8U) |
-        ((uint32_t)vision_payload[offset + 2U] << 16U) |
-        ((uint32_t)vision_payload[offset + 3U] << 24U);
-}
-
 static void vision_uart_publish_sample(void)
 {
-    uint32_t raw_position =
-        vision_uart_read_u32_le(VISION_POSITION_OFFSET);
-    uint32_t raw_velocity =
-        vision_uart_read_u32_le(VISION_VELOCITY_OFFSET);
     uint32_t now_ms;
-    uint32_t dt_ms;
-    float position_cm;
-    float velocity_cm_s;
     float position_mm;
-    float previous_position_mm;
-    float derived_velocity_mm_s;
+    float velocity_mm_s;
 
-    /*
-     * The protocol payload is IEEE-754 float32 in little-endian order.
-     * Reject the entire sample if either value is NaN or infinity.
-     */
-    if ((raw_position & FLOAT32_EXPONENT_MASK) ==
-            FLOAT32_EXPONENT_MASK ||
-        (raw_velocity & FLOAT32_EXPONENT_MASK) ==
-            FLOAT32_EXPONENT_MASK)
+    if (vision_protocol_decode(
+            vision_payload,
+            &position_mm,
+            &velocity_mm_s) == 0U)
     {
         vision_uart_error_count++;
         return;
     }
 
-    memcpy(&position_cm, &raw_position, sizeof(position_cm));
-    memcpy(&velocity_cm_s, &raw_velocity, sizeof(velocity_cm_s));
     now_ms = (uint32_t)tick_ms;
-    position_mm = position_cm * 10.0f;
-
-    if (vision_filter_initialized == 0U)
-    {
-        vision_filter_initialized = 1U;
-        vision_filtered_position_mm = position_mm;
-        vision_filtered_velocity_mm_s = velocity_cm_s * 10.0f;
-    }
-    else
-    {
-        previous_position_mm = vision_filtered_position_mm;
-        vision_filtered_position_mm +=
-            VISION_POSITION_FILTER_ALPHA *
-            (position_mm - vision_filtered_position_mm);
-        dt_ms = now_ms - vision_previous_sample_ms;
-        if (dt_ms >= VISION_FILTER_MIN_DT_MS &&
-            dt_ms <= VISION_FILTER_MAX_DT_MS)
-        {
-            derived_velocity_mm_s =
-                (vision_filtered_position_mm -
-                 previous_position_mm) *
-                1000.0f / (float)dt_ms;
-            vision_filtered_velocity_mm_s +=
-                VISION_VELOCITY_FILTER_ALPHA *
-                (derived_velocity_mm_s -
-                 vision_filtered_velocity_mm_s);
-        }
-        else if (dt_ms > VISION_FILTER_MAX_DT_MS)
-        {
-            vision_filtered_velocity_mm_s =
-                velocity_cm_s * 10.0f;
-        }
-    }
-
-    vision_previous_sample_ms = now_ms;
-    vision_ball_position_mm = vision_filtered_position_mm;
-    vision_ball_velocity_mm_s = vision_filtered_velocity_mm_s;
+    vision_ball_position_mm = position_mm;
+    vision_ball_velocity_mm_s = velocity_mm_s;
     vision_ball_last_update_ms = now_ms;
     vision_ball_position_valid = 1U;
     vision_ball_frame_count++;
@@ -173,10 +105,6 @@ void vision_uart_reset(void)
     vision_uart_error_count = 0U;
     vision_ball_position_valid = 0U;
     vision_last_byte_ms = (uint32_t)tick_ms;
-    vision_filter_initialized = 0U;
-    vision_filtered_position_mm = 0.0f;
-    vision_filtered_velocity_mm_s = 0.0f;
-    vision_previous_sample_ms = (uint32_t)tick_ms;
     memset(vision_payload, 0, sizeof(vision_payload));
     vision_uart_reset_parser();
 }

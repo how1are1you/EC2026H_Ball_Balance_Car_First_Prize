@@ -22,10 +22,13 @@ All rights reserved
 #include "imu/imu.h"
 #include "ball_balance.h"
 #include "ball_hold_lap.h"
+#include "ball_state_observer.h"
 #include "ball_static_task.h"
+#include "ball_turn_feedforward.h"
 #include "servo.h"
 #include "straight_turn_test.h"
 #include "turn_calibration.h"
+#include "uart_callback.h"
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
@@ -42,12 +45,72 @@ const menu_item_t Menu_Items[MENU_MODE_COUNT] =
 {
 	{RUN_MODE_STRAIGHT_TURN, "ONE LAP"},
 	{RUN_MODE_BALL_LAP, "BALL LAP"},
+	{RUN_MODE_DRIBBLE, "DRIBBLE"},
 	{RUN_MODE_BALL_HOLD_LAP, "BALL HOLD"},
 	{RUN_MODE_BALL_STATIC, "STATIC HYB"},
 	{RUN_MODE_SERVO_ADJUST, "SERVO ADJ"},
 	{RUN_MODE_IMU_DEBUG, "IMU DEBUG"}
 };
 static u8 Reset_Left_PI, Reset_Right_PI;
+static ball_turn_feedforward_t ball_turn_feedforward_state;
+volatile uint8_t ball_turn_feedforward_entry_active;
+
+static void update_ball_state_observer(uint32_t now_ms)
+{
+    ball_vision_measurement_t measurement;
+    uint32_t frame_before;
+    uint32_t frame_after;
+
+    do
+    {
+        frame_before = vision_ball_frame_count;
+        measurement.position_mm = vision_ball_position_mm;
+        measurement.velocity_mm_s = vision_ball_velocity_mm_s;
+        measurement.sample_ms = vision_ball_last_update_ms;
+        measurement.valid = vision_ball_position_valid;
+        frame_after = vision_ball_frame_count;
+    } while (frame_before != frame_after);
+
+    measurement.frame_count = frame_after;
+    ball_state_observer_update(
+        &ball_state_observer,
+        &measurement,
+        now_ms);
+}
+
+static void update_ball_turn_feedforward(void)
+{
+	uint8_t controller_context_active =
+		(Menu_Active == 0U &&
+		 Run_Mode == RUN_MODE_BALL_HOLD_LAP &&
+		 ball_hold_lap_controller_enabled() != 0U) ? 1U : 0U;
+	uint8_t arc_active =
+		(StraightTurnState == STRAIGHT_TURN_ARC_1 ||
+		 StraightTurnState == STRAIGHT_TURN_ARC_2) ? 1U : 0U;
+
+	if (controller_context_active != 0U)
+	{
+		if (ball_turn_feedforward_update(
+				&ball_turn_feedforward_state,
+				arc_active,
+				StraightTurnCommandSpeed,
+				StraightTurnCommandOmegaRadS) == 0U)
+		{
+			ball_turn_feedforward_reset(
+				&ball_turn_feedforward_state);
+		}
+	}
+	else
+	{
+		ball_turn_feedforward_reset(
+			&ball_turn_feedforward_state);
+	}
+
+	ball_turn_feedforward_entry_active =
+		ball_turn_feedforward_state.entry_active;
+	ball_balance_set_turn_feedforward(
+		ball_turn_feedforward_state.output_us);
+}
 
 static void menu_select_mode(uint8_t mode)
 {
@@ -70,7 +133,6 @@ static void menu_select_mode(uint8_t mode)
 void TIMER_0_INST_IRQHandler(void)
 {
     static int lastRunMode = -1;
-    imu_sample_t sample;
 
     if(DL_TimerA_getPendingInterrupt(TIMER_0_INST))
     {
@@ -82,6 +144,7 @@ void TIMER_0_INST_IRQHandler(void)
 			LED_Flash(100);
 			Get_Velocity_From_Encoder(Get_Encoder_countA,Get_Encoder_countB);
 			Get_Encoder_countA=Get_Encoder_countB=0;
+			update_ball_state_observer((uint32_t)tick_ms);
 			if (Run_Mode != lastRunMode)
 			{
 				Reset_Velocity_PI();
@@ -118,29 +181,22 @@ void TIMER_0_INST_IRQHandler(void)
 			{
 				ball_balance_set_enabled(
 					(Menu_Active == 0U) &&
-					(Run_Mode == RUN_MODE_BALL_LAP));
+					(Run_Mode == RUN_MODE_BALL_LAP ||
+					 Run_Mode == RUN_MODE_DRIBBLE));
 			}
-			if (Menu_Active == 0U &&
-				(Run_Mode == RUN_MODE_BALL_LAP ||
-				 Run_Mode == RUN_MODE_BALL_HOLD_LAP) &&
-				Flag_Stop == 0U)
-			{
-				imu_get_snapshot(&sample);
-				if (sample.status == IMU_STATUS_READY &&
-					sample.valid != 0U)
-				{
-					ball_balance_set_vehicle_acceleration_from_raw_ay(
-						sample.accel_g[1]);
-				}
-				else
-				{
-					ball_balance_set_vehicle_acceleration(0.0f);
-				}
-			}
-			else
-			{
-				ball_balance_set_vehicle_acceleration(0.0f);
-			}
+			ball_balance_set_predictive_guard_enabled(
+				(Menu_Active == 0U &&
+				 Run_Mode == RUN_MODE_BALL_HOLD_LAP &&
+				 ball_hold_lap_controller_enabled() != 0U) ?
+					1U : 0U);
+			update_ball_turn_feedforward();
+			ball_balance_set_vehicle_acceleration(
+				(Menu_Active == 0U &&
+				 (Run_Mode == RUN_MODE_BALL_LAP ||
+				  Run_Mode == RUN_MODE_DRIBBLE ||
+				  Run_Mode == RUN_MODE_BALL_HOLD_LAP) &&
+				 Flag_Stop == 0U) ?
+					StraightTurnStartupAccelerationMps2 : 0.0f);
 			if (Menu_Active != 0U)
 			{
 				control_uart_set_mode(CONTROL_UART_DISABLED);
@@ -155,6 +211,7 @@ void TIMER_0_INST_IRQHandler(void)
 					CONTROL_UART_OPEN_LOOP_TUNING);
 			}
 			else if (Run_Mode == RUN_MODE_BALL_LAP ||
+			         Run_Mode == RUN_MODE_DRIBBLE ||
 			         Run_Mode == RUN_MODE_BALL_HOLD_LAP)
 			{
 				control_uart_set_mode(CONTROL_UART_PID_TUNING);
@@ -188,6 +245,7 @@ void TIMER_0_INST_IRQHandler(void)
 				TurnCalibration_Run();
 			}else if(Run_Mode==RUN_MODE_STRAIGHT_TURN ||
 			         Run_Mode==RUN_MODE_BALL_LAP ||
+			         Run_Mode==RUN_MODE_DRIBBLE ||
 			         Run_Mode==RUN_MODE_BALL_HOLD_LAP){
 				StraightTurnTest_Run();
 			}
@@ -387,6 +445,7 @@ void Key(void)
 
         if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
             Run_Mode == RUN_MODE_BALL_LAP ||
+            Run_Mode == RUN_MODE_DRIBBLE ||
             Run_Mode == RUN_MODE_BALL_HOLD_LAP ||
             Run_Mode == RUN_MODE_IMU_DEBUG ||
             Run_Mode == RUN_MODE_BALL_STATIC ||
@@ -433,18 +492,26 @@ void Key(void)
             }
         }
         else if (Run_Mode == RUN_MODE_STRAIGHT_TURN ||
-                 Run_Mode == RUN_MODE_BALL_LAP)
+                 Run_Mode == RUN_MODE_BALL_LAP ||
+                 Run_Mode == RUN_MODE_DRIBBLE)
         {
             if (Flag_Stop)
             {
                 Reset_Velocity_PI();
-                StraightTurnTest_Start(
-                    (Run_Mode == RUN_MODE_BALL_LAP) ?
-                        STRAIGHT_TURN_BALL_SPEED_MPS :
+                if (Run_Mode == RUN_MODE_BALL_LAP ||
+                    Run_Mode == RUN_MODE_DRIBBLE)
+                {
+                    StraightTurnTest_StartWithPostLap(
+                        STRAIGHT_TURN_BALL_SPEED_MPS,
+                        STRAIGHT_TURN_BALL_ACCELERATION_MPS2,
+                        STRAIGHT_TURN_BALL_POST_LAP_DISTANCE_M);
+                }
+                else
+                {
+                    StraightTurnTest_Start(
                         STRAIGHT_TURN_FAST_SPEED_MPS,
-                    (Run_Mode == RUN_MODE_BALL_LAP) ?
-                        STRAIGHT_TURN_BALL_ACCELERATION_MPS2 :
                         STRAIGHT_TURN_FAST_ACCELERATION_MPS2);
+                }
             }
             else
             {

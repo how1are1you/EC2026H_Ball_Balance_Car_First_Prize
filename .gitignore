@@ -53,3 +53,12 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+tests/
+
+# Keil build outputs and local uVision settings
+keil/Objects/
+keil/Listings/
+keil/*.log
+keil/*.uvoptx
+keil/*.uvguix*

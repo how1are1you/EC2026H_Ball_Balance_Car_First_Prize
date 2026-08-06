@@ -30,10 +30,11 @@ All rights reserved
 #define RUN_MODE_BALL_STATIC  6
 #define RUN_MODE_SERVO_ADJUST 7
 #define RUN_MODE_BALL_HOLD_LAP 8
-#define RUN_MODE_COUNT        9
+#define RUN_MODE_DRIBBLE      9
+#define RUN_MODE_COUNT        10
 #define RUN_MODE_MENU_DEFAULT RUN_MODE_STRAIGHT_TURN
 
-#define MENU_MODE_COUNT (6U)
+#define MENU_MODE_COUNT (7U)
 #define MENU_ITEMS_PER_PAGE (4U)
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
@@ -81,6 +82,7 @@ extern int Run_Mode;//小车运行模式
 extern volatile uint8_t Menu_Active;
 extern volatile uint8_t Menu_Selection;
 extern volatile uint8_t Menu_SelectionIndex;
+extern volatile uint8_t ball_turn_feedforward_entry_active;
 extern const menu_item_t Menu_Items[MENU_MODE_COUNT];
 void TIM6_Init(void); 
 void Get_Velocity_From_Encoder(int Encoder1,int Encoder2);

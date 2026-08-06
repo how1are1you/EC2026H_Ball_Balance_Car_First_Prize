@@ -3,6 +3,7 @@
 #include "control.h"
 #include "IR_Module.h"
 #include "imu/imu.h"
+#include "startup_motion_gate.h"
 #include "turn_calibration.h"
 
 #include <math.h>
@@ -36,8 +37,11 @@ volatile float StraightTurnYawDeg;
 volatile float StraightTurnLineError;
 volatile float StraightTurnHeadingErrorDeg;
 volatile float StraightTurnCommandSpeed;
+volatile float StraightTurnCommandOmegaRadS;
 volatile float StraightTurnStartupAccelerationMps2;
+volatile uint8_t StraightTurnStartupMotionDetected;
 volatile uint32_t StraightTurnElapsedMs;
+volatile uint32_t StraightTurnStraight1TimeMs;
 volatile uint32_t StraightTurnLapTimeMs;
 volatile float StraightTurnPostLapDistanceM;
 
@@ -53,6 +57,7 @@ static uint16_t straight_turn_imu_stale_ticks;
 static uint16_t straight_turn_line_lost_ticks;
 static uint32_t straight_turn_elapsed_ticks;
 static uint32_t straight_turn_post_elapsed_ticks;
+static startup_motion_gate_t straight_turn_startup_motion_gate;
 static float straight_turn_target_speed_mps =
     STRAIGHT_TURN_FAST_SPEED_MPS;
 static float straight_turn_acceleration_mps2 =
@@ -93,7 +98,9 @@ static void straight_turn_fault(uint8_t fault)
     StraightTurnFault = fault;
     StraightTurnState = STRAIGHT_TURN_FAULT;
     StraightTurnCommandSpeed = 0.0f;
+    StraightTurnCommandOmegaRadS = 0.0f;
     StraightTurnStartupAccelerationMps2 = 0.0f;
+    StraightTurnStartupMotionDetected = 0U;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
     Flag_Stop = 1U;
@@ -181,6 +188,7 @@ static float straight_turn_heading_omega(
 static void straight_turn_command_straight(void)
 {
     float previous_speed_mps = StraightTurnCommandSpeed;
+    uint8_t startup_motion_detected = 0U;
     float command_omega =
         straight_turn_heading_omega(
             straight_turn_straight_heading_yaw,
@@ -198,7 +206,17 @@ static void straight_turn_command_straight(void)
     {
         StraightTurnCommandSpeed = straight_turn_target_speed_mps;
     }
+    if (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1)
+    {
+        startup_motion_detected = startup_motion_gate_update(
+            &straight_turn_startup_motion_gate,
+            MotorA.Current_Encoder,
+            MotorB.Current_Encoder);
+    }
+    StraightTurnStartupMotionDetected =
+        startup_motion_detected;
     if (StraightTurnState == STRAIGHT_TURN_STRAIGHT_1 &&
+        startup_motion_detected != 0U &&
         previous_speed_mps < straight_turn_target_speed_mps)
     {
         StraightTurnStartupAccelerationMps2 =
@@ -209,6 +227,7 @@ static void straight_turn_command_straight(void)
     {
         StraightTurnStartupAccelerationMps2 = 0.0f;
     }
+    StraightTurnCommandOmegaRadS = command_omega;
     Get_Target_Encoder(
         StraightTurnCommandSpeed,
         command_omega);
@@ -219,6 +238,9 @@ static void straight_turn_start_arc(uint8_t first_arc)
     straight_turn_arc_start_yaw =
         straight_turn_last_valid_yaw;
     StraightTurnStartupAccelerationMps2 = 0.0f;
+    StraightTurnStartupMotionDetected = 0U;
+    StraightTurnCommandOmegaRadS =
+        -StraightTurnCommandSpeed / TurnCalibrationRadiusM;
 
     if (first_arc != 0U)
     {
@@ -281,6 +303,11 @@ static void straight_turn_run_straight(void)
         STRAIGHT_TURN_ARC_LEAD_M;
     if (StraightTurnDistanceM >= turn_start_distance)
     {
+        if (first_straight != 0U)
+        {
+            StraightTurnStraight1TimeMs =
+                StraightTurnElapsedMs;
+        }
         straight_turn_start_arc(first_straight);
         return;
     }
@@ -314,6 +341,7 @@ static void straight_turn_blend_arc_exit(float yaw_magnitude)
         (1.0f - blend) * arc_omega +
         blend * straight_omega;
 
+    StraightTurnCommandOmegaRadS = command_omega;
     Get_Target_Encoder(
         TurnCalibrationCommandSpeed,
         command_omega);
@@ -328,7 +356,11 @@ static void straight_turn_run_arc(void)
     TurnCalibration_Run();
     StraightTurnCommandSpeed =
         TurnCalibrationCommandSpeed;
+    StraightTurnCommandOmegaRadS =
+        -TurnCalibrationCommandSpeed /
+        TurnCalibrationRadiusM;
     StraightTurnStartupAccelerationMps2 = 0.0f;
+    StraightTurnStartupMotionDetected = 0U;
     if (straight_turn_update_imu() == 0U)
     {
         return;
@@ -372,6 +404,7 @@ static void straight_turn_run_arc(void)
             else
             {
                 StraightTurnState = STRAIGHT_TURN_DONE;
+                StraightTurnCommandOmegaRadS = 0.0f;
             }
         }
     }
@@ -426,8 +459,10 @@ static void straight_turn_run_post_lap(void)
         {
             StraightTurnCommandSpeed = 0.0f;
             StraightTurnStartupAccelerationMps2 = 0.0f;
+            StraightTurnStartupMotionDetected = 0U;
             MotorA.Target_Encoder = 0.0f;
             MotorB.Target_Encoder = 0.0f;
+            StraightTurnCommandOmegaRadS = 0.0f;
             StraightTurnState = STRAIGHT_TURN_DONE;
             Flag_Stop = 1U;
             return;
@@ -438,6 +473,7 @@ static void straight_turn_run_post_lap(void)
         straight_turn_heading_omega(
             straight_turn_post_lap_heading_yaw,
             straight_turn_filtered_line_error);
+    StraightTurnCommandOmegaRadS = command_omega;
     Get_Target_Encoder(
         StraightTurnCommandSpeed,
         command_omega);
@@ -452,8 +488,11 @@ void StraightTurnTest_Reset(void)
     StraightTurnLineError = 0.0f;
     StraightTurnHeadingErrorDeg = 0.0f;
     StraightTurnCommandSpeed = 0.0f;
+    StraightTurnCommandOmegaRadS = 0.0f;
     StraightTurnStartupAccelerationMps2 = 0.0f;
+    StraightTurnStartupMotionDetected = 0U;
     StraightTurnElapsedMs = 0U;
+    StraightTurnStraight1TimeMs = 0U;
     StraightTurnLapTimeMs = 0U;
     StraightTurnPostLapDistanceM = 0.0f;
     straight_turn_initial_yaw = 0.0f;
@@ -468,6 +507,8 @@ void StraightTurnTest_Reset(void)
     straight_turn_line_lost_ticks = 0U;
     straight_turn_elapsed_ticks = 0U;
     straight_turn_post_elapsed_ticks = 0U;
+    startup_motion_gate_reset(
+        &straight_turn_startup_motion_gate);
     straight_turn_post_lap_target_m = 0.0f;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
@@ -521,7 +562,9 @@ void StraightTurnTest_StartWithPostLap(
 void StraightTurnTest_Stop(void)
 {
     StraightTurnCommandSpeed = 0.0f;
+    StraightTurnCommandOmegaRadS = 0.0f;
     StraightTurnStartupAccelerationMps2 = 0.0f;
+    StraightTurnStartupMotionDetected = 0U;
     MotorA.Target_Encoder = 0.0f;
     MotorB.Target_Encoder = 0.0f;
     StraightTurnState = STRAIGHT_TURN_IDLE;
